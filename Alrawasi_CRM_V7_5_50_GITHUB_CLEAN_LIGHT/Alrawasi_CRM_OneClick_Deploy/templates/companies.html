@@ -1,0 +1,200 @@
+{% extends 'base.html' %}{% block content %}
+{% if is_admin %}<div class="mb-3 d-flex gap-2 flex-wrap align-items-center pro-company-tools-hide">
+<a class="btn btn-outline-info" href="{{url_for('muqawil_enrichment_queue')}}">تصدير قائمة الإثراء</a>
+<a class="btn btn-outline-warning" href="{{url_for('membership_audit')}}">تدقيق أرقام العضوية</a>
+<form class="d-inline" method="post" action="{{url_for('import_muqawil_enrichment')}}" enctype="multipart/form-data"><label class="btn btn-outline-info mb-0">استيراد إثراء مقاول<input type="file" name="file" accept=".json,application/json" hidden onchange="this.form.submit()"></label></form>
+<form class="d-inline" method="post" action="{{url_for('import_muqawil_map_phones')}}" enctype="multipart/form-data"><label class="btn btn-success mb-0">استيراد جوالات خريطة مقاول<input type="file" name="file" accept=".json,application/json" hidden onchange="this.form.submit()"></label></form>
+</div><div class="alert alert-success py-2 pro-company-tools-hide">استيراد جوالات الخريطة آمن: يضيف الرقم فقط عندما يكون الجوال الحالي فارغًا، ولا يستبدل الأرقام الموجودة، وينشئ نسخة احتياطية تلقائية قبل التحديث.</div>{% endif %}<style>
+.contractor-card{border:0;border-radius:16px;transition:.15s}
+.contractor-card:hover{transform:translateY(-2px)}
+.company-logo{width:58px;height:58px;border-radius:14px;background:#f2f4f7;display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex:0 0 58px}
+.company-logo img{width:100%;height:100%;object-fit:contain}
+ .company-monogram{font-size:26px;font-weight:800;line-height:1}
+
+.company-logo{width:58px;height:58px;border-radius:14px;background:#eef3f8;display:flex;align-items:center;justify-content:center;flex:0 0 58px}
+
+
+
+
+.company-svg{width:38px;height:38px;display:block}
+.company-logo{color:#1f2937;background:#eef3f8;border:1px solid #e5e7eb}
+
+.real-company-logo{width:100%;height:100%;object-fit:contain;padding:5px;display:block}
+.logo-fallback{width:100%;height:100%;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+.company-logo>.logo-fallback{display:flex}
+.crm-number{direction:ltr;display:inline-flex;align-items:center;padding:2px 7px;border:1px solid #d7dde5;border-radius:7px;background:#f8fafc;font-weight:700;font-size:12px;white-space:nowrap}
+
+/* قسم المقاولين = أزرق فاتح؛ اتصال من القسمين = برتقالي فاتح.
+   ثبّت تباين الخط في جميع المظاهر بما فيها الوضع الاحترافي والداكن. */
+.crm-contacted,.crm-contracting-contact{background-color:#e7f4ff!important;border:2px solid #78b8ed!important}
+.crm-both-departments{background-color:#fff0dd!important;border:2px solid #eead6b!important}
+.crm-interested{background:#edf9f0!important;border:2px solid #79c88d!important}
+.crm-not-interested{background:#fff0f0!important;border:2px solid #e89a9a!important}
+.crm-follow-up{background:#fff8df!important;border:2px solid #e8ca65!important}
+.contractor-card.crm-contacted,.contractor-card.crm-interested,.contractor-card.crm-not-interested,.contractor-card.crm-follow-up,
+.contractor-card.crm-contracting-contact,.contractor-card.crm-both-departments{color:#152b44!important}
+/* The global appearance setting otherwise forces white text onto light cards. */
+.contractor-card.crm-contacted .text-muted,.contractor-card.crm-interested .text-muted,
+.contractor-card.crm-not-interested .text-muted,.contractor-card.crm-follow-up .text-muted,
+.contractor-card.crm-contracting-contact .text-muted,.contractor-card.crm-both-departments .text-muted,
+.contractor-card.crm-contracting-contact small,.contractor-card.crm-both-departments small,
+.contractor-card.crm-contracting-contact .small,.contractor-card.crm-both-departments .small,
+.contractor-card.crm-contacted .small{color:#42556c!important}
+.contractor-card.crm-contracting-contact a.company-title,
+.contractor-card.crm-both-departments a.company-title,
+.contractor-card.crm-contacted a.company-title{color:#10253d!important;font-weight:750}
+.contractor-card.crm-contracting-contact .crm-number,
+.contractor-card.crm-both-departments .crm-number{color:#162b44!important;background:#fffaf3!important;border-color:#d5dce4!important}
+body.crm-theme-professional .contractor-card.crm-contracting-contact{background-color:#e7f4ff!important;border-color:#78b8ed!important}
+body.crm-theme-professional .contractor-card.crm-both-departments{background-color:#fff0dd!important;border-color:#eead6b!important}
+.crm-departments-badge{font-weight:750;font-size:.74rem;padding:.4rem .6rem}
+.crm-departments-both{color:#fff!important;background:#ae4c0b!important}
+.crm-departments-contracting{color:#124277!important;background:#c0e5ff!important;border:1px solid #78b8ed}
+.grade-6{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important}
+</style>
+{% if is_admin %}
+<div class="d-flex flex-wrap gap-2 mb-3 pro-company-tools-hide">
+ <a class="btn btn-outline-dark" href="{{url_for('backup_db')}}">نسخة قاعدة البيانات</a>
+ <a class="btn btn-outline-success" href="{{url_for('export_full')}}">تصدير كامل Excel</a>
+ <form method="post" action="{{url_for('google_phone_batch')}}" class="d-flex gap-1">
+  <input type="number" name="limit" value="20" min="1" max="50" class="form-control form-control-sm" style="width:80px">
+  <button class="btn btn-outline-primary" type="submit">تعبئة الهواتف من Google Maps</button>
+ </form>
+</div>
+{% endif %}
+
+
+
+{% if is_admin %}
+<a class="btn btn-outline-primary mb-2 pro-company-tools-hide" href="{{ url_for('import_muqawil_json') }}">تحديث بيانات مقاول</a>
+{% endif %}
+<div class="crm-pro-page-header">
+ <div>
+  <div class="page-title"><i class="bi bi-buildings ms-2"></i> الشركات</div>
+  <div class="page-subtitle">الرئيسية / الشركات</div>
+ </div>
+ <div>
+  {% if can_add %}<a class="btn btn-success" href="/companies/add"><i class="bi bi-plus-lg"></i> إضافة شركة</a>{% endif %}
+ </div>
+</div>
+
+<div class="crm-pro-stats">
+ <div class="crm-pro-stat">
+  <div class="stat-icon"><i class="bi bi-buildings"></i></div>
+  <div><div class="stat-value">{{summary_stats.total}}</div><div class="stat-label">إجمالي الشركات</div></div>
+ </div>
+ <div class="crm-pro-stat success">
+  <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+  <div><div class="stat-value">{{summary_stats.verified}}</div><div class="stat-label">شركات موثقة</div></div>
+ </div>
+ <div class="crm-pro-stat warning">
+  <div class="stat-icon"><i class="bi bi-clock-fill"></i></div>
+  <div><div class="stat-value">{{summary_stats.unverified}}</div><div class="stat-label">غير موثقة</div></div>
+ </div>
+ <div class="crm-pro-stat purple">
+  <div class="stat-icon"><i class="bi bi-person-fill"></i></div>
+  <div><div class="stat-value">{{summary_stats.users}}</div><div class="stat-label">المستخدمون النشطون</div></div>
+ </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 crm-page-title"><h2>العملاء <small class="text-muted">({{total}})</small></h2><div>{% if my_specialty=='contracting' %}<span class="badge bg-primary">شركات المقاولات فقط</span>{% else %}<span class="badge bg-success">جميع الشركات</span>{% endif %}{% if can_add %} <a class="btn btn-sm btn-dark" href="/companies/add">+ إضافة شركة</a> <a class="btn btn-sm btn-outline-dark" href="/companies/import">استيراد ملف</a>{% endif %}</div></div><form class="card p-3 mb-3 crm-filter-card"><div class="row g-2"><div class="col-md-4"><input class="form-control" name="q" value="{{q}}" placeholder="اسم الشركة، الهاتف، البريد..."></div><div class="col-md-2"><select class="form-select" name="city"><option value="">كل المدن</option>{% for x in cities %}<option {% if city==x.city %}selected{% endif %}>{{x.city}}</option>{% endfor %}</select></div><div class="col-md-2"><select class="form-select" name="status"><option value="">كل الحالات</option>{% for k,v in status.items() %}<option value="{{k}}" {% if status_filter==k %}selected{% endif %}>{{v}}</option>{% endfor %}</select></div><div class="col-md-2"><select class="form-select" name="classification">
+<option value="" {% if not classification_filter %}selected{% endif %}>المصنفة وغير المصنفة</option>
+<option value="classified" {% if classification_filter=='classified' %}selected{% endif %}>المصنفة فقط</option>
+<option value="unclassified" {% if classification_filter=='unclassified' %}selected{% endif %}>غير المصنفة فقط</option>
+<option value="unspecified" {% if classification_filter=='unspecified' %}selected{% endif %}>غير محددة فقط</option>
+<option value="6" {% if classification_filter=='6' %}selected{% endif %}>الدرجة السادسة</option>
+<option value="5" {% if classification_filter=='5' %}selected{% endif %}>الدرجة الخامسة</option>
+<option value="4" {% if classification_filter=='4' %}selected{% endif %}>الدرجة الرابعة</option>
+<option value="3" {% if classification_filter=='3' %}selected{% endif %}>الدرجة الثالثة</option>
+<option value="2" {% if classification_filter=='2' %}selected{% endif %}>الدرجة الثانية</option>
+<option value="1" {% if classification_filter=='1' %}selected{% endif %}>الدرجة الأولى</option>
+</select></div>{% if is_admin %}<div class="col-md-2"><select class="form-select" name="rep"><option value="">كل المندوبين</option><option value="unassigned" {% if rep_filter=='unassigned' %}selected{% endif %}>غير معين</option>{% for u in users %}<option value="{{u.id}}" {% if rep_filter==u.id|string %}selected{% endif %}>{{u.name}}</option>{% endfor %}</select></div>{% endif %}<div class="col-md-2"><select class="form-select" name="per" id="companiesPerPage" aria-label="عدد الشركات في الصفحة"><option value="20" {% if per==20 %}selected{% endif %}>20 شركة</option><option value="30" {% if per==30 %}selected{% endif %}>30 شركة</option><option value="50" {% if per==50 %}selected{% endif %}>50 شركة</option><option value="100" {% if per==100 %}selected{% endif %}>100 شركة</option></select></div><div class="col-md-2"><button class="btn btn-dark w-100">بحث</button></div></div></form>{% if is_admin %}<form method="post" action="/companies/assign" id="assignForm"><div class="card p-3 mb-3"><div class="row g-2 align-items-center"><div class="col-md-5"><b>توزيع العملاء المحددين</b><div class="small text-muted">حدد العملاء من الجدول ثم اختر المندوب.</div></div><div class="col-md-5"><select class="form-select" name="assigned_user_id"><option value="">إلغاء التعيين</option>{% for u in users %}<option value="{{u.id}}">{{u.name}}</option>{% endfor %}</select></div><div class="col-md-2"><button class="btn btn-primary w-100">تعيين</button></div></div></div>{% endif %}<div class="card p-2"><div class="row g-3 mt-1">
+{% for r in rows %}
+<div class="col-12 col-md-6 col-xl-4">
+ <div class="card h-100 shadow-sm contractor-card{% if r.contact_department_state=='both' %} crm-both-departments{% elif r.contact_department_state=='contracting' %} crm-contracting-contact{% elif r.marketing_status=='contacted' %} crm-contacted{% elif r.marketing_status=='interested' %} crm-interested{% elif r.marketing_status in ['not_interested','not-interested'] %} crm-not-interested{% elif r.marketing_status in ['follow_up','follow-up'] %} crm-follow-up{% endif %}">
+  <div class="card-body">
+   {% if r.contact_department_state=='both' %}<div class="mb-2"><span class="badge crm-departments-badge crm-departments-both"><i class="bi bi-people-fill"></i> تواصل من القسمين</span></div>
+   {% elif r.contact_department_state=='contracting' %}<div class="mb-2"><span class="badge crm-departments-badge crm-departments-contracting"><i class="bi bi-check2-circle"></i> تواصل خدمات المقاولين</span></div>{% endif %}
+   <div class="d-flex gap-3 align-items-start">
+    <div class="company-logo" aria-label="شعار الشركة">
+{% if r.logo_url %}
+  <img class="real-company-logo" src="{{r.logo_url}}" alt="شعار {{(r.name_ar or r.name_en)|clean_company_name}}"
+       loading="lazy" referrerpolicy="no-referrer"
+       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+  <span class="logo-fallback" style="display:none">{{((r.name_ar or r.name_en)|clean_company_name)[:1] or 'ش'}}</span>
+{% else %}
+  <span class="logo-fallback">{{((r.name_ar or r.name_en)|clean_company_name)[:1] or 'ش'}}</span>
+{% endif %}
+</div>
+<div class="flex-grow-1">
+     <div class="d-flex align-items-center gap-2 flex-wrap">
+<span class="crm-number">#{{r.display_number}}</span>
+<a class="h5 company-title text-decoration-none mb-0" href="{{ url_for('company', cid=r.id, return_to=request.full_path.rstrip('?')) }}">{{(r.name_ar or r.name_en)|clean_company_name}}</a>
+{% if 'Muqawil Platform Crawler V3' in (r.data_source or '') %}
+ {% if r.source_verified %}<span class="badge bg-success">موثقة يدوياً</span>
+ {% else %}<span class="badge bg-danger">جديدة - غير موثقة</span>{% endif %}
+{% endif %}
+</div>
+     <div class="text-muted small">{{r.city or 'المدينة غير محددة'}}{% if r.address %} • {{r.address}}{% endif %}</div>{% if r.company_size or r.account_status %}<div class="small mt-1 text-muted">{% if r.company_size %}{{r.company_size}}{% endif %}{% if r.company_size and r.account_status %} • {% endif %}{% if r.account_status %}{{r.account_status}}{% endif %}</div>{% endif %}
+     <div class="mt-2">
+      {% if r.classification_status=='غير مصنفة' %}
+       <span class="badge classification-badge grade-unclassified">غير مصنفة</span>
+      {% elif not r.classification_grade or 'غير محدد' in (r.classification_grade or '') or not r.classification_status or r.classification_status=='غير محدد' %}
+       <span class="badge classification-badge grade-unspecified">غير محددة</span>
+      {% elif 'سادس' in (r.classification_grade or '') or r.classification_grade=='6' %}
+       <span class="badge classification-badge grade-6">الدرجة السادسة</span>
+      {% elif 'خامس' in (r.classification_grade or '') or r.classification_grade=='5' %}
+       <span class="badge classification-badge grade-5">الدرجة الخامسة</span>
+      {% elif 'رابع' in (r.classification_grade or '') or r.classification_grade=='4' %}
+       <span class="badge classification-badge grade-4">الدرجة الرابعة</span>
+      {% elif 'ثالث' in (r.classification_grade or '') or r.classification_grade=='3' %}
+       <span class="badge classification-badge grade-3">الدرجة الثالثة</span>
+      {% elif 'ثان' in (r.classification_grade or '') or r.classification_grade=='2' %}
+       <span class="badge classification-badge grade-2">الدرجة الثانية</span>
+      {% elif 'أول' in (r.classification_grade or '') or r.classification_grade=='1' %}
+       <span class="badge classification-badge grade-1">الدرجة الأولى</span>
+      {% else %}<span class="badge classification-badge grade-unspecified">{{r.classification_grade or 'غير محددة'}}</span>{% endif %}
+      {% if r.muqawil_member_no %}<span class="badge bg-light text-dark border">{{r.muqawil_member_no}}</span>{% endif %}
+     </div>
+    </div>
+   </div>
+   <hr>
+   <div class="row small mb-3">
+    <div class="col-6"><b>حالة العميل:</b> {{r.marketing_status or 'جديد'}}</div>
+    <div class="col-6"><b>المندوب:</b> {{r.rep or 'غير معين'}}</div>
+   </div>
+   {% if r.phone_mobile or r.phone_landline %}<div class="small mb-2"><b>الهاتف:</b> <span dir="ltr">{{r.phone_mobile or r.phone_landline}}</span>{% if r.phone_source=='unverified_import' %} <span class="badge bg-warning text-dark">رقم غير موثق</span>{% elif r.phone_source %} <span class="text-muted">• {{r.phone_source}}</span>{% endif %}</div>{% else %}<div class="small text-muted mb-2">لا يوجد رقم هاتف موثوق محفوظ.</div>{% endif %}
+   <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-sm btn-dark" href="{{ url_for('company', cid=r.id, return_to=request.full_path.rstrip('?')) }}">فتح الشركة</a>
+    {% if r.phone_mobile or r.phone_landline %}<a class="btn btn-sm btn-primary" href="tel:{{r.phone_mobile or r.phone_landline}}"><i class="bi bi-telephone"></i> اتصال</a>{% else %}<button class="btn btn-sm btn-primary" type="button" disabled><i class="bi bi-telephone"></i> اتصال</button>{% endif %}
+    {% if r.wa_link %}<a class="btn btn-sm btn-success" target="_blank" rel="noopener" href="{{r.wa_link}}"><i class="bi bi-whatsapp"></i> واتساب</a>{% else %}<button class="btn btn-sm btn-success" type="button" disabled title="أضف رقم واتساب من صفحة الشركة"><i class="bi bi-whatsapp"></i> واتساب</button>{% endif %}
+    {% if r.email_link %}<a class="btn btn-sm btn-outline-secondary" href="{{r.email_link}}"><i class="bi bi-envelope"></i> إيميل</a>{% else %}<button class="btn btn-sm btn-outline-secondary" type="button" disabled><i class="bi bi-envelope"></i> إيميل</button>{% endif %}
+    {% if is_admin and not r.phone_mobile %}<button class="btn btn-sm btn-outline-success" type="submit" formmethod="post" formaction="{{url_for('google_phone_one',cid=r.id)}}" name="return_to" value="{{request.full_path.rstrip('?')}}"><i class="bi bi-geo-alt"></i> جلب الرقم من Google Maps</button>{% endif %}
+    {% if r.latitude and r.longitude %}
+     <a class="btn btn-sm btn-outline-primary" target="_blank" href="https://www.google.com/maps/search/?api=1&query={{r.latitude}},{{r.longitude}}">الخريطة</a>
+    {% elif r.address or r.city %}
+     <a class="btn btn-sm btn-outline-primary" target="_blank" href="https://www.google.com/maps/search/?api=1&query={{((r.address or '')+' '+(r.city or '')+' '+(r.name_ar or ''))|urlencode}}">الخريطة</a>
+    {% endif %}
+    {% if r.muqawil_profile_url or r.source_url %}<a class="btn btn-sm btn-outline-secondary" target="_blank" href="{{r.muqawil_profile_url or r.source_url}}">صفحة مقاول</a>{% endif %}
+   </div>
+  </div>
+ </div>
+</div>
+{% endfor %}
+</div>
+{% if is_admin %}</form>{% endif %}
+<script>
+(()=>{const el=document.getElementById('companiesPerPage');if(!el)return;const key='alrawasiCompaniesPerPage:{{ session.get("uid","guest") }}';const params=new URLSearchParams(location.search);const saved=localStorage.getItem(key);if(!params.has('per')&&saved&&['20','30','50','100'].includes(saved)){params.set('per',saved);params.set('page','1');location.replace(location.pathname+'?'+params.toString());return;}el.addEventListener('change',()=>{localStorage.setItem(key,el.value);const p=new URLSearchParams(location.search);p.set('per',el.value);p.set('page','1');location.href=location.pathname+'?'+p.toString();});})();
+</script>
+<nav class="mt-4" aria-label="صفحات الشركات"><ul class="pagination justify-content-center flex-wrap gap-1">
+{% set base='?q=' ~ (q|urlencode) ~ '&city=' ~ (city|urlencode) ~ '&status=' ~ (status_filter|urlencode) ~ '&rep=' ~ (rep_filter|urlencode) ~ '&classification=' ~ (classification_filter|urlencode) ~ '&per=' ~ per ~ '&page=' %}
+{% if page>1 %}<li class="page-item"><a class="page-link" href="{{base}}{{page-1}}">السابق</a></li>{% endif %}
+{% if page > 3 %}<li class="page-item"><a class="page-link" href="{{base}}1">1</a></li>{% if page > 4 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}{% endif %}
+{% for p in range([1,page-2]|max, [total_pages,page+2]|min + 1) %}<li class="page-item {% if p==page %}active{% endif %}"><a class="page-link" href="{{base}}{{p}}">{{p}}</a></li>{% endfor %}
+{% if page < total_pages-2 %}{% if page < total_pages-3 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}<li class="page-item"><a class="page-link" href="{{base}}{{total_pages}}">{{total_pages}}</a></li>{% endif %}
+{% if page<total_pages %}<li class="page-item"><a class="page-link" href="{{base}}{{page+1}}">التالي</a></li>{% endif %}
+</ul><div class="text-center small text-muted mb-2">صفحة {{page}} من {{total_pages}} • {{total}} شركة</div>
+<form method="get" class="d-flex justify-content-center align-items-center gap-2 flex-wrap" onsubmit="const n=this.page.valueAsNumber; if(!n||n<1||n>{{total_pages}}){this.page.focus();return false;}">
+<input type="hidden" name="q" value="{{q}}"><input type="hidden" name="city" value="{{city}}"><input type="hidden" name="status" value="{{status_filter}}"><input type="hidden" name="rep" value="{{rep_filter}}"><input type="hidden" name="classification" value="{{classification_filter}}"><input type="hidden" name="per" value="{{per}}">
+<label for="directPage" class="small fw-bold">الانتقال إلى صفحة:</label><input id="directPage" class="form-control form-control-sm" style="width:100px" type="number" name="page" min="1" max="{{total_pages}}" value="{{page}}" inputmode="numeric"><button class="btn btn-sm btn-dark" type="submit">انتقال</button>
+</form></nav>{% endblock %}

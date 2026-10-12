@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% block content %}
+<h2>المستخدمون والمندوبون</h2>
+<div class="alert alert-info">يمكن للمدير تحديد المظهر الابتدائي لكل مستخدم. وبعد تسجيل الدخول يستطيع المستخدم تخصيص مظهره بنفسه من «المظهر والرؤية» والعودة لاحقاً إلى إعدادات المدير.</div>
+{% macro appearance_fields(prefix='', ap={}) %}
+<div class="row g-2 mt-2 p-2 border rounded">
+ <div class="col-12"><b>المظهر الافتراضي للمستخدم</b></div>
+ <div class="col-md-2"><label class="form-label">الخلفية</label><input class="form-control form-control-color" type="color" name="appearance_bg" value="{{ap.get('bg','#f5f6f8')}}"></div>
+ <div class="col-md-2"><label class="form-label">البطاقات</label><input class="form-control form-control-color" type="color" name="appearance_card" value="{{ap.get('card','#ffffff')}}"></div>
+ <div class="col-md-2"><label class="form-label">النص</label><input class="form-control form-control-color" type="color" name="appearance_text" value="{{ap.get('text','#212529')}}"></div>
+ <div class="col-md-2"><label class="form-label">العناوين</label><input class="form-control form-control-color" type="color" name="appearance_heading" value="{{ap.get('heading','#111827')}}"></div>
+ <div class="col-md-2"><label class="form-label">الشريط</label><input class="form-control form-control-color" type="color" name="appearance_nav" value="{{ap.get('nav','#111827')}}"></div>
+ <div class="col-md-2"><label class="form-label">حجم العرض</label><select class="form-select" name="appearance_scale">{% for n in [85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160] %}<option value="{{n}}" {% if ap.get('scale',100)|int==n %}selected{% endif %}>{{n}}%</option>{% endfor %}</select></div>
+ <input type="hidden" name="appearance_border" value="{{ap.get('border','#dee2e6')}}">
+</div>
+{% endmacro %}
+<div class="card p-3 mb-3"><h5>إضافة مستخدم</h5><form method="post" action="/users/add" class="row g-2"><div class="col-md-3"><input class="form-control" name="name" placeholder="الاسم" required></div><div class="col-md-3"><input class="form-control" name="email" type="email" placeholder="البريد" required></div><div class="col-md-2"><input class="form-control" name="password" placeholder="كلمة المرور" required></div><div class="col-md-2"><select class="form-select" name="role"><option value="rep">مندوب</option><option value="manager">مشرف</option><option value="admin">مدير</option></select></div><div class="col-md-2"><select class="form-select" name="specialty">{% for k,v in specialties.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></div><div class="col-12"><textarea class="form-control" name="whatsapp_template" rows="2" placeholder="رسالة واتساب مخصصة (اختياري). استخدم {{'{{rep_name}}'}} و {{'{{company_name}}'}}"></textarea></div>{{ appearance_fields() }}<div class="col-12"><button class="btn btn-dark">إضافة المستخدم</button></div></form></div>
+{% for u in rows %}<div class="card p-3 mb-3"><form method="post" action="/users/{{u.id}}/update"><div class="row g-2 align-items-center"><div class="col-md-3"><b>{{u.name}}</b><div class="small text-muted">{{u.email}} — {{u.role}}</div></div><div class="col-md-3"><select class="form-select" name="specialty">{% for k,v in specialties.items() %}<option value="{{k}}" {% if u.specialty==k %}selected{% endif %}>{{v}}</option>{% endfor %}</select></div><div class="col-md-5"><textarea class="form-control" name="whatsapp_template" rows="3">{{u.whatsapp_template or default_messages.get(u.specialty or 'general','')}}</textarea></div><div class="col-md-1"><button class="btn btn-dark w-100">حفظ</button></div></div>
+{% set ap = appearance_map.get(u.id,{}) %}{{ appearance_fields('',ap) }}</form><form method="post" action="/users/{{u.id}}/reset-password" class="row g-2 mt-2 p-2 border rounded" onsubmit="return confirm('تعيين كلمة مرور جديدة للمستخدم {{u.name}}؟');">
+<div class="col-12"><b>إعادة تعيين كلمة المرور</b></div>
+<div class="col-md-5"><input class="form-control" type="password" name="new_password" minlength="10" placeholder="كلمة المرور الجديدة (10 أحرف على الأقل)" required></div>
+<div class="col-md-5"><input class="form-control" type="password" name="confirm_password" minlength="10" placeholder="تأكيد كلمة المرور" required></div>
+<div class="col-md-2"><button class="btn btn-outline-dark w-100">تعيين</button></div>
+</form>
+{% if u.id != session.uid %}<form method="post" action="/users/{{u.id}}/delete" class="mt-2" onsubmit="return confirm('هل أنت متأكد من حذف المستخدم {{u.name}}؟ سيتم إلغاء تعيين شركاته مع الاحتفاظ باسمه في سجلات التواصل السابقة.');"><button class="btn btn-outline-danger">حذف المستخدم</button></form>{% else %}<div class="small text-muted mt-2">هذا هو حسابك الحالي؛ لا يمكن حذفه أثناء استخدامه.</div>{% endif %}</div>{% endfor %}
+{% endblock %}

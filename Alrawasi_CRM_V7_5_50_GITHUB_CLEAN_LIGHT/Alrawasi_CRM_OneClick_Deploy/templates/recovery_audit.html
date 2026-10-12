@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block content %}
+<h2>التدقيق النهائي قبل الاستعادة — قراءة فقط</h2>
+<div class="alert alert-info">هذه الصفحة لا تعدّل أي سجل ولا تنفذ الاستعادة.</div>
+<table class="table table-dark table-striped">
+<tr><th>إجمالي الشركات الحية</th><td>{{total_companies}}</td></tr>
+<tr><th>مفاتيح ملف 13,288</th><td>{{patch_total}}</td></tr>
+<tr><th>شركات لديها قيمة حالية في mobile/whatsapp</th><td>{{with_contact}}</td></tr>
+<tr><th>منها لديها muqawilKey</th><td>{{contact_with_key}}</td></tr>
+<tr><th>منها بدون muqawilKey</th><td>{{contact_no_key}}</td></tr>
+<tr><th>تقاطع أصحاب الجوال الحالي مع ملف 13,288</th><td><b>{{overlap}}</b></td></tr>
+<tr><th>أصحاب جوال حالي خارج ملف 13,288</th><td><b>{{contact_outside}}</b></td></tr>
+<tr><th>مفاتيح من ملف 13,288 غير موجودة في القاعدة الحية</th><td>{{patch_missing_live}}</td></tr>
+</table>
+
+{% macro sample_table(title, rows) %}
+<h4>{{title}}</h4>
+{% if rows %}
+<table class="table table-dark table-bordered"><tr><th>ID</th><th>الشركة</th><th>muqawilKey</th><th>phone_mobile</th><th>whatsapp</th><th>muqawil_phone_mobile</th></tr>
+{% for r in rows %}<tr><td>{{r.id}}</td><td>{{r.name}}</td><td>{{r.key}}</td><td>{{r.phone}}</td><td>{{r.whatsapp}}</td><td>{{r.muqawil_phone}}</td></tr>{% endfor %}
+</table>
+{% else %}<div class="alert alert-secondary">لا توجد سجلات في هذه المجموعة.</div>{% endif %}
+{% endmacro %}
+
+{{ sample_table('عينة من التقاطع مع ملف 13,288',sample_overlap) }}
+{{ sample_table('عينة من أصحاب الجوال خارج ملف 13,288',sample_outside) }}
+{{ sample_table('عينة من أصحاب الجوال بدون muqawilKey',sample_no_key) }}
+<a class="btn btn-secondary" href="{{url_for('recovery_center')}}">عودة إلى مركز الاستعادة</a>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.report-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.report-title{font-size:1.55rem;font-weight:850;color:var(--crm-heading)}
+.report-sub{font-size:.86rem;opacity:.7}
+.report-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1rem}
+.report-kpi{background:var(--crm-card);border:1px solid var(--crm-border);border-radius:14px;padding:1rem;display:flex;gap:.8rem;align-items:center}
+.report-kpi .ico{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.report-kpi .num{font-size:1.45rem;font-weight:850;color:var(--crm-heading)}
+.report-kpi .lbl{font-size:.82rem;opacity:.72}
+.ico-blue{background:rgba(22,119,255,.12);color:#1677ff}.ico-green{background:rgba(25,135,84,.12);color:#198754}
+.ico-orange{background:rgba(245,158,11,.16);color:#d97706}.ico-purple{background:rgba(111,66,193,.12);color:#6f42c1}
+.report-table th{white-space:nowrap}
+.report-table td{vertical-align:middle}
+.report-summary td,.report-summary th{text-align:center}
+.report-summary td:first-child,.report-summary th:first-child{text-align:right}
+@media(max-width:900px){.report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.report-kpis{grid-template-columns:1fr}}
+@media print{
+ nav,.crm-pro-sidebar,.accessibility-panel,.no-print,.contact-ledger-alert,.crm-classic-brand-block{display:none!important}
+ main.container{margin:0!important;padding:.5rem!important}
+ body{background:#fff!important}
+ .card,.report-kpi{box-shadow:none!important}
+}
+</style>
+
+<div class="report-head">
+ <div>
+  <div class="report-title"><i class="bi bi-bar-chart-line ms-2"></i>تقارير التواصل الشهرية</div>
+  <div class="report-sub">حصر إنجاز كل مستخدم حسب الشركات التي تم التواصل معها أو تعذر التواصل معها.</div>
+ </div>
+ <div class="d-flex gap-2 flex-wrap no-print">
+  <a class="btn btn-success" href="{{url_for('reports_export_xlsx',month=month,type=report_type,user_id=selected_user)}}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+  <a class="btn btn-outline-primary" href="{{url_for('reports_export_csv',month=month,type=report_type,user_id=selected_user)}}"><i class="bi bi-filetype-csv"></i> CSV</a>
+  <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> طباعة</button>
+ </div>
+</div>
+
+<form class="card p-3 mb-3 no-print" method="get">
+ <div class="row g-3 align-items-end">
+  <div class="col-md-3">
+   <label class="form-label fw-bold">الشهر</label>
+   <input class="form-control" type="month" name="month" value="{{month}}">
+  </div>
+  <div class="col-md-3">
+   <label class="form-label fw-bold">نوع التقرير</label>
+   <select class="form-select" name="type">
+    <option value="contacted" {% if report_type=='contacted' %}selected{% endif %}>تم التواصل معها فقط</option>
+    <option value="unreachable" {% if report_type=='unreachable' %}selected{% endif %}>لا يمكن التواصل معها فقط</option>
+    <option value="both" {% if report_type=='both' %}selected{% endif %}>الاثنان معاً</option>
+   </select>
+  </div>
+  {% if is_admin %}
+  <div class="col-md-3">
+   <label class="form-label fw-bold">المستخدم</label>
+   <select class="form-select" name="user_id">
+    <option value="all" {% if selected_user=='all' %}selected{% endif %}>كل المستخدمين</option>
+    {% for u in users %}
+     <option value="{{u.id}}" {% if selected_user==u.id|string %}selected{% endif %}>{{u.name}}</option>
+    {% endfor %}
+   </select>
+  </div>
+  {% else %}
+  <input type="hidden" name="user_id" value="{{session.uid}}">
+  <div class="col-md-3">
+   <label class="form-label fw-bold">المستخدم</label>
+   <input class="form-control" value="{{user}}" disabled>
+  </div>
+  {% endif %}
+  <div class="col-md-3"><button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> عرض التقرير</button></div>
+ </div>
+</form>
+
+<div class="report-kpis">
+ <div class="report-kpi"><div class="ico ico-blue"><i class="bi bi-buildings"></i></div><div><div class="num">{{totals.total}}</div><div class="lbl">إجمالي الشركات المنجزة</div></div></div>
+ <div class="report-kpi"><div class="ico ico-green"><i class="bi bi-check-circle"></i></div><div><div class="num">{{totals.contacted}}</div><div class="lbl">تم التواصل معها</div></div></div>
+ <div class="report-kpi"><div class="ico ico-orange"><i class="bi bi-telephone-x"></i></div><div><div class="num">{{totals.unreachable}}</div><div class="lbl">لا يمكن التواصل معها</div></div></div>
+ <div class="report-kpi"><div class="ico ico-purple"><i class="bi bi-activity"></i></div><div><div class="num">{{totals.events}}</div><div class="lbl">إجمالي سجلات النشاط</div></div></div>
+</div>
+
+<div class="card p-3 mb-3">
+ <h5 class="mb-3"><i class="bi bi-people ms-2"></i>ملخص إنجاز المستخدمين — {{month}}</h5>
+ <div class="table-responsive">
+  <table class="table table-hover report-summary mb-0">
+   <thead><tr><th>المستخدم</th><th>تم التواصل</th><th>لا يمكن التواصل</th><th>إجمالي الشركات</th><th>سجلات النشاط</th></tr></thead>
+   <tbody>
+    {% for r in summary %}
+    <tr>
+     <td><b>{{r.name}}</b></td><td>{{r.contacted}}</td><td>{{r.unreachable}}</td><td><b>{{r.total}}</b></td><td>{{r.events}}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-center text-muted py-4">لا توجد بيانات لهذا الشهر.</td></tr>
+    {% endfor %}
+   </tbody>
+  </table>
+ </div>
+</div>
+
+<div class="card p-3">
+ <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="mb-0">
+   {% if report_type=='contacted' %}الشركات التي تم التواصل معها
+   {% elif report_type=='unreachable' %}الشركات التي لا يمكن التواصل معها
+   {% else %}الشركات التي تم التعامل معها{% endif %}
+  </h5>
+  <span class="badge text-bg-primary">{{rows|length}} شركة</span>
+ </div>
+ <div class="table-responsive">
+  <table class="table table-hover report-table mb-0">
+   <thead>
+    <tr><th>#</th><th>الشركة</th><th>رقم العضوية</th><th>المدينة</th><th>الجوال</th><th>الحالة</th><th>المستخدم</th><th>التاريخ</th><th>ملاحظات</th></tr>
+   </thead>
+   <tbody>
+    {% for r in rows %}
+    <tr>
+     <td>{{loop.index}}</td>
+     <td><a href="{{url_for('company',cid=r.company_id)}}">{{r.name_ar}}</a></td>
+     <td>{{r.muqawil_member_no or '-'}}</td>
+     <td>{{r.city or '-'}}</td>
+     <td dir="ltr">{{r.phone_mobile or r.whatsapp or '-'}}</td>
+     <td>
+      {% if r.outcome=='contacted' %}<span class="badge text-bg-success">تم التواصل</span>
+      {% else %}<span class="badge text-bg-warning">لا يمكن التواصل</span>{% endif %}
+     </td>
+     <td>{{r.rep_name}}</td>
+     <td dir="ltr">{{r.contacted_at}}</td>
+     <td>{{r.notes or '-'}}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="text-center text-muted py-5">لا توجد شركات مطابقة للفترة والفلتر المحدد.</td></tr>
+    {% endfor %}
+   </tbody>
+  </table>
+ </div>
+</div>
+
+<div class="alert alert-info mt-3 mb-0">
+ <i class="bi bi-info-circle"></i>
+ يحتسب «إجمالي الشركات المنجزة» كل شركة مرة واحدة لكل مستخدم خلال الشهر وفق آخر نتيجة مسجلة لها في ذلك الشهر، بينما «سجلات النشاط» يحصي جميع محاولات التواصل المسجلة.
+</div>
+{% endblock %}

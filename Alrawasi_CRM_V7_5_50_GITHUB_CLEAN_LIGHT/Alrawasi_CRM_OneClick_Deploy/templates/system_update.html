@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% block content %}
+<div class="container" style="max-width:760px"><div class="card"><div class="card-body">
+<h3 class="mb-3">تحديث النظام بدون GitHub</h3>
+<div class="alert alert-info">ارفع ملف تحديث CRM بصيغة ZIP الذي أرسله لك. النظام يتحقق من الحزمة، ويحفظها على القرص الدائم، ثم يعيد تحميل التطبيق. <b>قاعدة البيانات crm.db لا يتم استبدالها.</b></div>
+<form method="post" enctype="multipart/form-data" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerText='جاري التحقق والتثبيت...';">
+<label class="form-label fw-bold">ملف التحديث ZIP</label><input class="form-control mb-3" type="file" name="file" accept=".zip,application/zip" required>
+<button class="btn btn-warning btn-lg w-100" type="submit"><i class="bi bi-cloud-arrow-up"></i> رفع وتثبيت التحديث</button></form>
+<hr><div class="small text-muted">الحماية: مدير النظام فقط • فحص app.py وVERSION • منع المسارات غير الآمنة • عدم استبدال crm.db • الاحتفاظ بالحزمة السابقة للرجوع إليها عند الحاجة.</div>
+</div></div></div>{% endblock %}

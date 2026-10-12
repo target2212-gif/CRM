@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% block content %}
+<div class="alert alert-success mb-3"><b>الإصدار V7.5.1</b> — تهيئة دليل مقاول المدمج جاهزة.</div>
+<div class="card p-4 mb-3">
+  <h3>تحديث بيانات منصة مقاول</h3>
+  <p class="text-muted">ارفع ملف JSON من V4.2 أو الإصدارات اللاحقة للتحديث التراكمي. لا يتم استيراد الهاتف أو واتساب من ملفات الجامع، ولا يتم تغيير حالة العميل أو المندوب أو المتابعة للشركات الموجودة.</p>
+  <form method="post" enctype="multipart/form-data">
+    <input class="form-control mb-3" type="file" name="file" accept=".json,application/json" required>
+    <button class="btn btn-primary">فحص الملف وتحديث مقاول</button>
+  </form>
+</div>
+<div class="card p-4 border-danger border-2"><h4 class="text-danger">استبدال دليل الشركات بالكامل — 15,966 شركة موثقة</h4>
+<p>اختر ملف <b>muqawil_enrichment_merged_15966_V7_5_12.json</b>. يفحص النظام العدد والتكرار وصحة روابط مقاول قبل أي حذف.</p>
+<div class="alert alert-warning">سيتم حذف جميع الشركات الحالية وسجل التواصل المرتبط بها، ثم إنشاء الدليل من الملف الجديد. <b>المستخدمون وقوالب الرسائل والإعدادات محفوظة.</b></div>
+<form method="post" action="{{ url_for('reset_import_verified_muqawil') }}" enctype="multipart/form-data"><input class="form-control mb-3" type="file" name="file" accept=".json,application/json" required>
+<label class="form-label fw-bold">للتأكيد اكتب RESET15966</label><input class="form-control mb-3" name="confirm" placeholder="RESET15966" required>
+<button class="btn btn-danger btn-lg">حذف الدليل السابق واستيراد 15,966</button></form></div>
+{% endblock %}

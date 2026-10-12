@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+ <div><h2 class="mb-1">تدقيق أرقام عضوية مقاول</h2><div class="text-muted">الأرقام المكررة لا تُصحح تلقائيًا؛ الهوية المعتمدة هي muqawilKey.</div></div>
+ <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{{url_for('membership_audit_queue')}}">تنزيل قائمة التحقق</a>
+ <form method="post" action="{{url_for('membership_audit_import')}}" enctype="multipart/form-data"><label class="btn btn-success mb-0">استيراد ملف التصحيح<input hidden type="file" name="file" accept=".json,application/json" onchange="this.form.submit()"></label></form></div>
+</div>
+<div class="alert alert-warning">مجموعات عضوية مكررة: <b>{{total_groups}}</b> • الشركات داخلها: <b>{{total_companies}}</b>. لن نحذف أو نخمن أي رقم؛ التصحيح يتم فقط من ملف موثق من صفحة مقاول.</div>
+{% for g in groups %}<div class="card mb-3"><div class="card-header"><b>رقم العضوية: {{g.member}}</b> <span class="badge bg-danger">{{g.count}} شركات</span></div>
+<div class="card-body">{% for c in g.companies %}<div class="border-bottom py-2"><b>{{c.name_ar}}</b> <span class="text-muted">• {{c.muqawil_key}}</span>
+{% if c.muqawil_profile_url or c.source_url %}<a target="_blank" class="btn btn-sm btn-outline-secondary float-end" href="{{c.muqawil_profile_url or c.source_url}}">صفحة مقاول</a>{% endif %}</div>{% endfor %}</div></div>{% else %}<div class="alert alert-success">لا توجد أرقام عضوية مكررة.</div>{% endfor %}
+{% endblock %}

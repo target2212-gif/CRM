@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: alrawasi-crm
+    runtime: docker
+    plan: free
+    rootDir: Alrawasi_CRM_OneClick_Deploy
+    healthCheckPath: /health
+    envVars:
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_RECOVERY_KEY
+        sync: false
+      - key: CONTACTS_DATABASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOW_SEED_INITIALIZATION
+        value: "false"
+      - key: PORT
+        value: 5000
+      - key: DATA_DIR
+        value: /tmp/alrawasi-data
+      - key: MUQAWIL_SYNC_TOKEN
+        generateValue: true

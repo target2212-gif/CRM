@@ -1,0 +1,22 @@
+{% extends 'base.html' %}{% block content %}
+<div class="card p-3 mb-4 border-warning"><h4>استعادة نسخة JSON كاملة</h4>
+<p>إذا فقد Render Free تغييرات بعد Restart/Deploy، ارفع آخر نسخة JSON محفوظة. تُنشأ نسخة أمان قبل الاستعادة.</p>
+<form method="post" action="{{url_for('restore_json_snapshot')}}" enctype="multipart/form-data" class="row g-2">
+<div class="col-md-7"><input class="form-control" type="file" name="file" accept=".json,application/json" required></div>
+<div class="col-md-3"><input class="form-control" name="confirm" placeholder="اكتب RESTORE" required></div>
+<div class="col-md-2"><button class="btn btn-warning w-100">استعادة JSON</button></div></form></div>
+<h2>مركز استعادة وتثبيت البيانات</h2>
+<div class="alert alert-info">الحالة الحية: الشركات <b>{{live.companies}}</b> • شركات لديها phone_mobile أو whatsapp: <b>{{live.mobiles}}</b> • سجلات التواصل <b>{{live.interactions}}</b>.</div>
+<div class="alert alert-secondary"><b>حقول الاتصال الفعلية:</b>
+{% for c in actual_contact_cols %} {{c}}=<b>{{field_counts[c]}}</b>{% if not loop.last %} • {% endif %}{% endfor %}
+</div>
+<div class="card mb-3"><div class="card-body"><h4>رفع ملف جوالات خريطة مقاول</h4>
+<p>ارفع muqawil_map_phone_FINAL_13288.json. سيظهر Preview فقط ولن تعدل القاعدة.</p>
+<form method="post" action="{{url_for('recovery_map_upload')}}" enctype="multipart/form-data">
+<input class="form-control mb-2" type="file" name="file" accept=".json,application/json" required>
+<button class="btn btn-success">رفع وفحص الملف</button></form></div></div>
+<div class="card"><div class="card-body"><h4>دمج نتيجة الفحص الشامل الجديد</h4>
+<form method="post" action="{{url_for('import_full_reaudit')}}" enctype="multipart/form-data">
+<input class="form-control mb-2" type="file" name="file" accept=".json,application/json" required>
+<button class="btn btn-outline-primary">Backup ثم دمج التدقيق الشامل</button></form></div></div>
+{% endblock %}

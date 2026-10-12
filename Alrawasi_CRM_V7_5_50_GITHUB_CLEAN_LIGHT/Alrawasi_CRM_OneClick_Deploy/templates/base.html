@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تلال الرواسي CRM</title>
+<link rel="icon" href="{{ url_for('static', filename='branding/favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='branding/favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='branding/favicon-48x48.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='branding/apple-touch-icon.png') }}">
+<link rel="manifest" href="{{ url_for('static', filename='branding/site.webmanifest') }}">
+<meta name="theme-color" content="#111827">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root{
+ --crm-bg:#f5f6f8;--crm-card:#ffffff;--crm-text:#212529;--crm-heading:#111827;
+ --crm-border:#dee2e6;--crm-nav:#111827;--crm-scale:1;
+}
+html{font-size:calc(16px * var(--crm-scale));}
+body{background:var(--crm-bg)!important;color:var(--crm-text)!important;min-height:100vh}
+.navbar{background:var(--crm-nav)!important}.card{background-color:var(--crm-card);color:var(--crm-text);border:1px solid var(--crm-border)!important;box-shadow:0 2px 10px #0000000d}
+h1,h2,h3,h4,h5,h6,.h1,.h2,.h3,.h4,.h5,.h6{color:var(--crm-heading)}
+.form-control,.form-select{font-size:1rem}.btn{font-size:.95rem}.small,small{font-size:.875em!important}
+.stat{font-size:1.7rem;font-weight:700}.table td,.table th{vertical-align:middle}.ltr{direction:ltr;unicode-bidi:plaintext}
+.status-badge{display:inline-block;padding:.35rem .65rem;border-radius:999px;font-weight:700;font-size:.82rem}
+tr.status-new{background:#fff!important}.status-badge.status-new{background:#e9ecef;color:#343a40}
+tr.status-contacted{background:#e7f1ff!important}.status-badge.status-contacted{background:#0d6efd;color:#fff}
+tr.status-interested{background:#fff3cd!important}.status-badge.status-interested{background:#ffc107;color:#212529}
+tr.status-quote-requested{background:#f3e8ff!important}.status-badge.status-quote-requested{background:#6f42c1;color:#fff}
+tr.status-quote-sent{background:#e2d9f3!important}.status-badge.status-quote-sent{background:#59359a;color:#fff}
+tr.status-followup{background:#cff4fc!important}.status-badge.status-followup{background:#0dcaf0;color:#073642}
+tr.status-contracted{background:#d1e7dd!important}.status-badge.status-contracted{background:#198754;color:#fff}
+tr.status-not-interested{background:#f8d7da!important}.status-badge.status-not-interested{background:#dc3545;color:#fff}
+tr.status-unreachable{background:#e9ecef!important}.status-badge.status-unreachable{background:#6c757d;color:#fff}
+tr.status-postponed{background:#ffe5d0!important}.status-badge.status-postponed{background:#fd7e14;color:#fff}
+.accessibility-panel{position:fixed;z-index:2000;top:72px;left:18px;width:min(390px,calc(100vw - 36px));background:var(--crm-card);color:var(--crm-text);border:2px solid var(--crm-border);border-radius:14px;padding:16px;box-shadow:0 12px 35px rgba(0,0,0,.25);display:none}
+.accessibility-panel.open{display:block}.appearance-color{width:52px;height:38px;padding:2px}.scale-value{min-width:62px;text-align:center;font-weight:700}.appearance-preview{border:1px solid var(--crm-border);background:var(--crm-card);border-radius:10px;padding:10px}
+
+/* V7.5.3: عناصر متوافقة مع الألوان المخصصة والوضع الداكن */
+.text-muted{color:color-mix(in srgb,var(--crm-text) 72%,transparent)!important}
+.card .text-muted,.card small,.card .small{color:color-mix(in srgb,var(--crm-text) 76%,transparent)!important}
+.crm-number{color:var(--crm-text)!important;background:var(--crm-card)!important;border-color:var(--crm-border)!important}
+.card hr{border-color:var(--crm-border);opacity:.7}
+.btn-outline-dark{color:var(--crm-text);border-color:var(--crm-text)}
+.btn-outline-dark:hover{background:var(--crm-text);color:var(--crm-card)}
+.btn-outline-secondary{color:var(--crm-text);border-color:var(--crm-border)}
+.btn-outline-secondary:hover{background:var(--crm-border);color:var(--crm-text)}
+.btn:disabled,.btn.disabled{opacity:.62;color:var(--crm-text)!important;border-color:var(--crm-border)!important}
+.page-link{background:var(--crm-card);border-color:var(--crm-border);color:var(--crm-text)}
+.page-item.disabled .page-link{background:var(--crm-bg);color:var(--crm-text);opacity:.75}
+.table{--bs-table-bg:var(--crm-card);--bs-table-color:var(--crm-text);--bs-table-border-color:var(--crm-border)}
+.form-control,.form-select{background-color:#fff;color:#111827;border-color:#aab2bd}
+.form-control::placeholder{color:#667085;opacity:1}
+.appearance-preview,.accessibility-panel{background:var(--crm-card)!important;color:var(--crm-text)!important}
+
+/* V7.5.45: هوية تلال الرواسي */
+.crm-brand-link{display:flex;align-items:center;gap:.55rem;text-decoration:none}
+.crm-brand-mark{width:38px;height:38px;object-fit:contain;flex:0 0 38px}
+.crm-brand-text{line-height:1.1;white-space:nowrap}
+.crm-brand-full{display:block;width:min(165px,32vw);height:auto;background:#fff;border-radius:14px;padding:7px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.crm-login-logo{display:block;width:min(260px,74vw);height:auto;margin:0 auto 1.25rem;background:#fff;border-radius:18px;padding:10px}
+@media (max-width:700px){
+ .crm-brand-text-main{display:none}
+ .crm-brand-mark{width:34px;height:34px;flex-basis:34px}
+ .crm-brand-full{width:110px}
+}
+
+/* V7.5.47 — المظهر الاحترافي المصحح.
+   يبقى اختيارياً لكل مستخدم ولا يغيّر المظهر السابق المحفوظ. */
+:root{
+ --crm-accent:#1677ff;--crm-success:#18a957;
+ --crm-pro-sidebar:188px;--crm-pro-header:78px
+}
+.pro-only{display:none!important}
+
+/* ===== الرأس العلوي ===== */
+.crm-pro-actions{align-items:center;gap:.55rem}
+.crm-pro-actions .dropdown-menu{
+ min-width:245px;border:1px solid color-mix(in srgb,var(--crm-border) 72%,transparent);
+ border-radius:13px;padding:.5rem;background:var(--crm-card);color:var(--crm-text);
+ box-shadow:0 18px 48px rgba(7,35,65,.22)
+}
+.crm-pro-actions .dropdown-item{
+ display:flex;align-items:center;gap:.55rem;border-radius:9px;
+ padding:.68rem .75rem;color:var(--crm-text);font-weight:650
+}
+.crm-pro-actions .dropdown-item:hover{
+ background:color-mix(in srgb,var(--crm-accent) 9%,var(--crm-card));
+ color:var(--crm-heading)
+}
+.crm-pro-actions .btn-pro-nav{
+ min-height:42px;padding:.4rem .9rem;border:1px solid rgba(255,255,255,.32);
+ color:#fff;background:rgba(255,255,255,.035);font-weight:750;border-radius:9px
+}
+.crm-pro-actions .btn-pro-nav:hover,.crm-pro-actions .btn-pro-nav:focus{
+ background:rgba(255,255,255,.13);color:#fff;border-color:rgba(255,255,255,.55)
+}
+.crm-pro-user{
+ display:none;align-items:center;gap:.55rem;color:#fff;margin-inline-start:auto
+}
+.crm-pro-user .user-name{font-size:.9rem;font-weight:750;white-space:nowrap}
+.crm-pro-user .user-avatar{
+ width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+ background:color-mix(in srgb,var(--crm-accent) 88%,#fff);font-size:1.1rem
+}
+.crm-pro-user .ledger-ok,.crm-pro-user .ledger-off{
+ width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center
+}
+.crm-pro-user .ledger-ok{background:rgba(25,135,84,.18);color:#90f0b2;border:1px solid rgba(144,240,178,.35)}
+.crm-pro-user .ledger-off{background:rgba(220,53,69,.18);color:#ffb0b8;border:1px solid rgba(255,176,184,.35)}
+
+/* شعار الرأس فقط — لا يتكرر داخل الشريط الجانبي */
+.crm-brand-pro-name,.crm-brand-pro-en{display:none}
+body.crm-theme-professional .navbar-brand.crm-brand-link{
+ min-width:245px;gap:.7rem;margin:0;padding:.2rem .35rem;color:#fff
+}
+body.crm-theme-professional .crm-brand-mark{
+ width:52px;height:52px;flex-basis:52px;background:#fff;border-radius:12px;padding:3px
+}
+body.crm-theme-professional .crm-brand-text{
+ display:flex;flex-direction:column;align-items:flex-start;line-height:1.08
+}
+body.crm-theme-professional .crm-brand-text-main{display:none}
+body.crm-theme-professional .crm-brand-pro-name{
+ display:block;font-size:1.12rem;font-weight:850;color:#fff
+}
+body.crm-theme-professional .crm-brand-pro-en{
+ display:block;font-size:.61rem;letter-spacing:2.2px;color:#7ad85f;font-weight:800;margin-top:3px
+}
+body.crm-theme-professional .crm-brand-version{
+ font-size:.66rem!important;opacity:.72;margin-top:3px
+}
+
+/* ===== الشريط الجانبي: تنقل فقط ===== */
+.crm-pro-sidebar{
+ display:none;position:fixed;z-index:1025;top:var(--crm-pro-header);right:0;bottom:0;
+ width:var(--crm-pro-sidebar);
+ background:linear-gradient(180deg,var(--crm-nav),color-mix(in srgb,var(--crm-nav) 78%,#00111f));
+ border-left:1px solid rgba(255,255,255,.09);padding:1rem .7rem;overflow:auto
+}
+.crm-pro-sidebar .side-nav-title{
+ color:rgba(255,255,255,.45);font-size:.7rem;font-weight:800;
+ padding:.35rem .75rem .5rem;letter-spacing:.6px
+}
+.crm-pro-sidebar .side-link{
+ display:flex;align-items:center;gap:.72rem;color:rgba(255,255,255,.9);text-decoration:none;
+ padding:.72rem .78rem;border-radius:9px;margin:.18rem 0;font-weight:700;
+ border:0;width:100%;background:transparent;text-align:right
+}
+.crm-pro-sidebar .side-link i{font-size:1.08rem;width:1.35rem;text-align:center}
+.crm-pro-sidebar .side-link:hover{
+ background:rgba(255,255,255,.09);color:#fff
+}
+.crm-pro-sidebar .side-link.active{
+ background:var(--crm-accent);color:#fff;
+ box-shadow:0 7px 20px color-mix(in srgb,var(--crm-accent) 28%,transparent)
+}
+.crm-pro-sidebar .side-sep{height:1px;background:rgba(255,255,255,.10);margin:.75rem .5rem}
+
+/* ===== تفعيل المظهر ===== */
+body.crm-theme-professional{
+ background:color-mix(in srgb,var(--crm-bg) 94%,#d9e6f1)!important
+}
+body.crm-theme-professional .classic-nav-actions{display:none!important}
+body.crm-theme-professional .pro-only{display:flex!important}
+body.crm-theme-professional .crm-pro-sidebar{display:block!important}
+body.crm-theme-professional .crm-pro-user{display:flex}
+body.crm-theme-professional .navbar{
+ min-height:var(--crm-pro-header);
+ background:linear-gradient(90deg,color-mix(in srgb,var(--crm-nav) 88%,#003d68),var(--crm-nav))!important;
+ box-shadow:0 5px 22px rgba(7,38,68,.20);margin-bottom:0!important;
+ position:sticky;top:0;z-index:1030;padding:.55rem .8rem
+}
+body.crm-theme-professional .navbar .container-fluid{
+ display:flex;align-items:center;flex-wrap:nowrap;gap:1rem
+}
+body.crm-theme-professional main.container{
+ max-width:none;width:auto;margin-right:var(--crm-pro-sidebar);
+ padding:1.45rem 1.5rem 3rem!important
+}
+
+/* عناصر الهوية القديمة داخل المحتوى لا تظهر في المظهر الاحترافي */
+body.crm-theme-professional .crm-classic-brand-block,
+body.crm-theme-professional .crm-pro-hero{display:none!important}
+
+/* حالة Neon تظهر في الرأس كأيقونة، لا كشريط كبير */
+body.crm-theme-professional .contact-ledger-alert{display:none!important}
+
+body.crm-theme-professional .card{
+ border-radius:14px!important;box-shadow:0 5px 22px rgba(16,55,88,.07)!important
+}
+body.crm-theme-professional .form-control,
+body.crm-theme-professional .form-select{
+ border-radius:9px;min-height:42px;
+ border-color:color-mix(in srgb,var(--crm-border) 82%,#8aa0b5)
+}
+body.crm-theme-professional .btn{border-radius:8px;font-weight:680}
+body.crm-theme-professional .btn-primary{background:var(--crm-accent);border-color:var(--crm-accent)}
+body.crm-theme-professional .btn-success{background:var(--crm-success);border-color:var(--crm-success)}
+body.crm-theme-professional .alert{border-radius:11px}
+body.crm-theme-professional .accessibility-panel{top:86px}
+body.crm-theme-professional .pro-company-tools-hide{display:none!important}
+
+/* ===== صفحة الشركات ===== */
+.crm-pro-page-header,.crm-pro-stats{display:none}
+body.crm-theme-professional .crm-pro-page-header{
+ display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem
+}
+.crm-pro-page-header .page-title{font-size:1.55rem;font-weight:850;color:var(--crm-heading)}
+.crm-pro-page-header .page-subtitle{font-size:.85rem;color:color-mix(in srgb,var(--crm-text) 60%,transparent)}
+body.crm-theme-professional .crm-pro-stats{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1rem
+}
+.crm-pro-stat{
+ background:var(--crm-card);border:1px solid var(--crm-border);border-radius:14px;
+ padding:1rem;display:flex;align-items:center;gap:.85rem;min-height:96px;
+ box-shadow:0 5px 20px rgba(16,55,88,.06)
+}
+.crm-pro-stat .stat-icon{
+ width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+ font-size:1.35rem;background:color-mix(in srgb,var(--crm-accent) 12%,var(--crm-card));color:var(--crm-accent)
+}
+.crm-pro-stat.success .stat-icon{background:rgba(25,135,84,.12);color:#198754}
+.crm-pro-stat.warning .stat-icon{background:rgba(245,158,11,.15);color:#d97706}
+.crm-pro-stat.purple .stat-icon{background:rgba(111,66,193,.12);color:#6f42c1}
+.crm-pro-stat .stat-value{font-size:1.55rem;font-weight:850;color:var(--crm-heading);line-height:1}
+.crm-pro-stat .stat-label{font-size:.82rem;color:color-mix(in srgb,var(--crm-text) 68%,transparent);margin-top:.35rem}
+
+body.crm-theme-professional .crm-page-title{display:none!important}
+body.crm-theme-professional .crm-filter-card{
+ padding:1rem!important;border-radius:14px!important;margin-bottom:1rem!important
+}
+body.crm-theme-professional .crm-filter-card:before{
+ content:'البحث والفلاتر';display:block;font-weight:850;color:var(--crm-heading);
+ margin-bottom:.8rem;font-size:1rem
+}
+body.crm-theme-professional .contractor-card{
+ border:1px solid var(--crm-border)!important;border-radius:14px!important
+}
+body.crm-theme-professional .contractor-card .card-body{padding:1rem}
+body.crm-theme-professional .contractor-card:hover{
+ transform:translateY(-2px);box-shadow:0 12px 28px rgba(25,65,100,.10)!important
+}
+body.crm-theme-professional .company-logo{border-radius:11px!important}
+body.crm-theme-professional .pagination .page-link{border-radius:8px}
+body.crm-theme-professional .page-item.active .page-link{
+ background:var(--crm-accent);border-color:var(--crm-accent)
+}
+
+/* اختيار المظهر */
+.theme-choice{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.theme-choice button{min-height:62px}
+.theme-choice .active{
+ outline:3px solid color-mix(in srgb,var(--crm-accent) 35%,transparent);
+ border-color:var(--crm-accent)!important
+}
+
+@media(max-width:1180px){
+ body.crm-theme-professional .navbar-brand.crm-brand-link{min-width:205px}
+ body.crm-theme-professional .crm-brand-pro-en{display:none}
+ .crm-pro-actions .btn-pro-nav{padding:.38rem .6rem;font-size:.8rem}
+}
+@media(max-width:991px){
+ body.crm-theme-professional .crm-pro-sidebar{display:none!important}
+ body.crm-theme-professional main.container{margin-right:0}
+ body.crm-theme-professional .crm-brand-text{display:none}
+ body.crm-theme-professional .navbar-brand.crm-brand-link{min-width:auto}
+ body.crm-theme-professional .crm-brand-mark{width:44px;height:44px;flex-basis:44px}
+ body.crm-theme-professional .crm-pro-actions{overflow-x:auto;flex-wrap:nowrap}
+ body.crm-theme-professional .crm-pro-user .user-name{display:none}
+ body.crm-theme-professional .crm-pro-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px){
+ body.crm-theme-professional .crm-pro-stats{grid-template-columns:1fr}
+ body.crm-theme-professional .crm-pro-user{display:none}
+ body.crm-theme-professional main.container{padding:1rem!important}
+ .theme-choice{grid-template-columns:1fr}
+}
+
+/* {{ app_version }}: ألوان درجات التصنيف عالية الوضوح */
+.classification-badge{font-weight:800;border:1px solid currentColor;background:transparent!important;padding:.42rem .62rem}
+.grade-unclassified,.grade-unspecified{color:#dc3545!important;background:rgba(220,53,69,.10)!important}
+.grade-5{color:#c2410c!important;background:rgba(194,65,12,.10)!important}
+.grade-4{color:#9333ea!important;background:rgba(147,51,234,.10)!important}
+.grade-3{color:#b7791f!important;background:rgba(183,121,31,.11)!important}
+.grade-2{color:#0d6efd!important;background:rgba(13,110,253,.10)!important}
+.grade-1{color:#198754!important;background:rgba(25,135,84,.10)!important}
+
+</style>
+</head>
+<body>
+<nav class="navbar navbar-dark mb-4"><div class="container-fluid"><a class="navbar-brand crm-brand-link" href="/">
+<img class="crm-brand-mark" src="{{ url_for('static', filename='branding/alrawasi-mark.png') }}" alt="تلال الرواسي">
+<span class="crm-brand-text">
+ <span class="crm-brand-text-main">تلال الرواسي CRM</span>
+ <span class="crm-brand-pro-name">تلال الرواسي — CRM</span>
+ <span class="crm-brand-pro-en">AL RAWASI HILLS</span>
+ <small class="crm-brand-version" style="font-size:.62em;opacity:.75">V{{app_version}}</small>
+</span>
+</a>{% if user %}
+<div class="classic-nav-actions d-flex gap-2 align-items-center text-white flex-wrap">
+ <a class="btn btn-sm btn-outline-light" href="/companies">الشركات</a>
+ <a class="btn btn-sm btn-outline-light" href="/reports"><i class="bi bi-bar-chart-line"></i> التقارير</a>
+ <a class="btn btn-sm btn-outline-light" href="/export">تصدير</a>
+ {% if session.role=='admin' %}<a class="btn btn-sm btn-outline-success" href="{{url_for('export_json_snapshot')}}">نسخة JSON</a>{% endif %}
+ {% if session.role=='admin' %}
+ <a class="btn btn-sm btn-outline-light" href="/users">المستخدمون</a>
+ <a class="btn btn-sm btn-outline-warning" href="/admin/data-lock"><i class="bi bi-shield-lock"></i> حماية البيانات</a>
+ <a class="btn btn-sm btn-outline-success" href="/admin/recovery-center"><i class="bi bi-life-preserver"></i> استعادة البيانات</a>
+ <a class="btn btn-sm btn-warning" href="/admin/system-update"><i class="bi bi-cloud-arrow-up"></i> تحديث النظام</a>
+ {% endif %}
+ <button type="button" class="btn btn-sm btn-outline-light appearance-open-btn"><i class="bi bi-eye"></i> المظهر والرؤية</button>
+ <span>{{user}}</span><a class="btn btn-sm btn-light" href="/logout">خروج</a>
+</div>
+
+<div class="pro-only crm-pro-actions">
+ {% if session.role=='admin' %}
+ <div class="dropdown">
+  <button class="btn btn-sm btn-pro-nav dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-database"></i> البيانات</button>
+  <div class="dropdown-menu dropdown-menu-end">
+   <a class="dropdown-item" href="{{url_for('export_json_snapshot')}}"><i class="bi bi-filetype-json"></i> نسخة JSON</a>
+   <a class="dropdown-item" href="{{url_for('backup_db')}}"><i class="bi bi-database"></i> نسخة قاعدة البيانات</a>
+   <a class="dropdown-item" href="{{url_for('import_muqawil_json')}}"><i class="bi bi-arrow-repeat"></i> تحديث بيانات مقاول</a>
+   <a class="dropdown-item" href="{{url_for('export_full')}}"><i class="bi bi-file-earmark-excel"></i> تصدير كامل Excel</a>
+   <a class="dropdown-item" href="/export"><i class="bi bi-download"></i> تصدير الشركات</a>
+  </div>
+ </div>
+
+ <div class="dropdown">
+  <button class="btn btn-sm btn-pro-nav dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-shield-check"></i> الحماية والاستعادة</button>
+  <div class="dropdown-menu dropdown-menu-end">
+   <a class="dropdown-item" href="/admin/data-lock"><i class="bi bi-shield-lock"></i> حماية البيانات</a>
+   <a class="dropdown-item" href="/admin/recovery-center"><i class="bi bi-life-preserver"></i> استعادة البيانات</a>
+   <a class="dropdown-item" href="/admin/system-update"><i class="bi bi-cloud-arrow-up"></i> تحديث النظام</a>
+  </div>
+ </div>
+
+ <div class="dropdown">
+  <button class="btn btn-sm btn-pro-nav dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-patch-check"></i> التحقق</button>
+  <div class="dropdown-menu dropdown-menu-end">
+   <a class="dropdown-item" href="{{url_for('membership_audit')}}"><i class="bi bi-search"></i> تدقيق أرقام العضوية</a>
+   <a class="dropdown-item" href="{{url_for('muqawil_enrichment_queue')}}"><i class="bi bi-cloud-download"></i> تصدير قائمة الإثراء</a>
+   <a class="dropdown-item" href="{{url_for('membership_audit_queue')}}"><i class="bi bi-list-check"></i> قائمة تحقق العضوية</a>
+  </div>
+ </div>
+ {% endif %}
+
+ <div class="dropdown">
+  <button class="btn btn-sm btn-pro-nav dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i> المزيد</button>
+  <div class="dropdown-menu dropdown-menu-end">
+   <a class="dropdown-item" href="/reports"><i class="bi bi-bar-chart-line"></i> التقارير الشهرية</a>
+   {% if session.role=='admin' %}<a class="dropdown-item" href="/users"><i class="bi bi-people"></i> المستخدمون</a>{% endif %}
+   <button type="button" class="dropdown-item appearance-open-btn"><i class="bi bi-palette"></i> المظهر والرؤية</button>
+   <div class="dropdown-divider"></div>
+   <a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-left"></i> خروج</a>
+  </div>
+ </div>
+</div>
+
+<div class="pro-only crm-pro-user">
+ {% if session.role=='admin' %}
+  {% if contact_ledger_configured %}
+   <span class="ledger-ok" title="الحفظ الدائم لسجل التواصل مفعّل"><i class="bi bi-cloud-check"></i></span>
+  {% else %}
+   <span class="ledger-off" title="الحفظ الدائم لسجل التواصل غير مفعّل"><i class="bi bi-cloud-slash"></i></span>
+  {% endif %}
+ {% endif %}
+ <span class="user-name">{{user}}</span>
+ <span class="user-avatar"><i class="bi bi-person-fill"></i></span>
+</div>
+{% endif %}</div></nav>
+
+{% if user %}
+<aside class="crm-pro-sidebar pro-only">
+ {% set p=request.path %}
+ <div class="side-nav-title">التنقل</div>
+ <a class="side-link {% if p=='/' %}active{% endif %}" href="/"><i class="bi bi-house-door"></i> الرئيسية</a>
+ <a class="side-link {% if p.startswith('/companies') or p.startswith('/company/') %}active{% endif %}" href="/companies"><i class="bi bi-buildings"></i> الشركات</a>
+ {% if session.role=='admin' %}
+ <a class="side-link {% if p.startswith('/users') %}active{% endif %}" href="/users"><i class="bi bi-people"></i> المستخدمون</a>
+ {% endif %}
+ <a class="side-link" href="/companies?status=contacted"><i class="bi bi-telephone"></i> سجل التواصل</a>
+ <a class="side-link {% if p.startswith('/reports') %}active{% endif %}" href="/reports"><i class="bi bi-bar-chart"></i> التقارير الشهرية</a>
+ <div class="side-sep"></div>
+ <button type="button" class="side-link appearance-open-btn"><i class="bi bi-gear"></i> الإعدادات والمظهر</button>
+</aside>
+
+<div id="appearancePanel" class="accessibility-panel" aria-label="إعدادات المظهر والرؤية">
+ <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">إعدادات المظهر والرؤية</h5><button class="btn-close" id="appearanceClose" aria-label="إغلاق"></button></div>
+ <label class="form-label fw-bold">تصميم الواجهة</label>
+ <div class="theme-choice mb-3">
+  <button type="button" class="btn btn-outline-secondary" id="classicTheme"><i class="bi bi-layout-text-window"></i><br><span>المظهر الحالي</span><div class="small opacity-75">يحافظ على تصميمك السابق</div></button>
+  <button type="button" class="btn btn-outline-primary" id="professionalTheme"><i class="bi bi-window-sidebar"></i><br><span>تلال الرواسي الاحترافي</span><div class="small opacity-75">القوائم المجمعة + الشريط الجانبي</div></button>
+ </div>
+ <div class="row g-3">
+  <div class="col-8"><label class="form-label">لون خلفية النظام</label></div><div class="col-4 text-start"><input id="bgColor" class="form-control form-control-color appearance-color" type="color" value="#f5f6f8"></div>
+  <div class="col-8"><label class="form-label">لون بطاقات الشركات</label></div><div class="col-4 text-start"><input id="cardColor" class="form-control form-control-color appearance-color" type="color" value="#ffffff"></div>
+  <div class="col-8"><label class="form-label">لون النص</label></div><div class="col-4 text-start"><input id="textColor" class="form-control form-control-color appearance-color" type="color" value="#212529"></div>
+  <div class="col-8"><label class="form-label">لون العناوين</label></div><div class="col-4 text-start"><input id="headingColor" class="form-control form-control-color appearance-color" type="color" value="#111827"></div>
+  <div class="col-8"><label class="form-label">لون الشريط العلوي</label></div><div class="col-4 text-start"><input id="navColor" class="form-control form-control-color appearance-color" type="color" value="#0b466f"></div>
+  <div class="col-8"><label class="form-label">لون التمييز والأزرار</label></div><div class="col-4 text-start"><input id="accentColor" class="form-control form-control-color appearance-color" type="color" value="#1677ff"></div>
+ </div>
+ <hr>
+ <label class="form-label fw-bold">حجم العرض والنص</label>
+ <div class="d-flex align-items-center gap-2 mb-2">
+  <button type="button" class="btn btn-outline-secondary" id="scaleDown">−</button>
+  <input type="range" class="form-range flex-grow-1" id="scaleRange" min="85" max="160" step="5" value="100">
+  <button type="button" class="btn btn-outline-secondary" id="scaleUp">+</button>
+  <span id="scaleValue" class="scale-value">100%</span>
+ </div>
+ <div class="small text-muted mb-3">يمكن التكبير من 85% إلى 160%. يؤثر على النصوص والأزرار وحقول الإدخال لتسهيل القراءة.</div>
+ <div class="d-grid gap-2">
+  <button type="button" class="btn btn-dark" id="darkPreset"><i class="bi bi-moon-stars"></i> وضع داكن عالي الوضوح</button>
+  <button type="button" class="btn btn-outline-secondary" id="softPreset">خلفية مريحة للعين</button>
+  <button type="button" class="btn btn-outline-danger" id="resetAppearance">العودة لمظهر المدير الافتراضي</button>
+ </div>
+ <div class="appearance-preview mt-3">معاينة: <b>نص واضح</b> — هذه إعداداتك الشخصية. يمكنك العودة في أي وقت إلى المظهر الافتراضي الذي حدده المدير.</div>
+</div>
+{% endif %}
+
+<main class="container pb-5">
+{% if user %}
+<div class="crm-classic-brand-block d-flex justify-content-center justify-content-md-start mb-3">
+ <img class="crm-brand-full" src="{{ url_for('static', filename='branding/alrawasi-hills-logo.jpg') }}" alt="شعار تلال الرواسي">
+</div>
+{% endif %}
+{% if user %}
+<div class="crm-pro-hero">
+ <div>
+  <div class="hero-title">مرحباً {{user}} — تلال الرواسي CRM</div>
+  <div class="hero-sub">واجهة احترافية منظمة، مع الحفاظ على إعداداتك وألوانك الشخصية.</div>
+ </div>
+ <img class="hero-logo" src="{{ url_for('static', filename='branding/alrawasi-hills-logo.jpg') }}" alt="تلال الرواسي">
+</div>
+{% endif %}
+{% if user and session.role=='admin' %}
+ {% if contact_ledger_configured %}
+  <div class="alert alert-success py-2 contact-ledger-alert"><b>حماية سجل التواصل:</b> مفعلة عبر PostgreSQL خارجي. سجلات التواصل ستُستعاد تلقائياً بعد إعادة تشغيل Render.</div>
+ {% else %}
+  <div class="alert alert-danger py-2 contact-ledger-alert"><b>تحذير:</b> حماية سجل التواصل الدائمة غير مفعلة. أضف <code>CONTACTS_DATABASE_URL</code> في Render؛ التخزين المحلي في الخطة المجانية مؤقت.</div>
+ {% endif %}
+{% endif %}
+{% with messages=get_flashed_messages() %}{% for m in messages %}<div class="alert alert-warning">{{m}}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if user %}
+<script>
+(()=>{
+ const KEY='alrawasiAppearance:v1:{{ session.get("uid", "guest") }}';
+ const systemDefaults={bg:'#f5f6f8',card:'#ffffff',text:'#212529',heading:'#111827',border:'#dee2e6',nav:'#111827',accent:'#1677ff',scale:100,theme:'classic'};
+ const adminDefaults=Object.assign({},systemDefaults,{{ appearance_default|default({})|tojson }});
+ // مهم: الحسابات القديمة لا تحتوي على theme؛ لذلك تبقى تلقائياً على classic.
+ if(!adminDefaults.theme) adminDefaults.theme='classic';
+ if(!adminDefaults.accent) adminDefaults.accent='#1677ff';
+ const defaults=adminDefaults;
+ const root=document.documentElement;
+ const body=document.body;
+ const $=id=>document.getElementById(id);
+ function safeLoad(){
+  try{
+   const saved=JSON.parse(localStorage.getItem(KEY)||'{}');
+   const out=Object.assign({},defaults,saved);
+   if(!saved.theme) out.theme='classic';
+   if(!out.accent) out.accent='#1677ff';
+   return out;
+  }catch(e){return {...defaults}}
+ }
+ let s=safeLoad();
+ function updateThemeButtons(){
+   const classic=$('classicTheme'),pro=$('professionalTheme');
+   if(classic) classic.classList.toggle('active',s.theme!=='professional');
+   if(pro) pro.classList.toggle('active',s.theme==='professional');
+ }
+ function apply(save=true){
+   root.style.setProperty('--crm-bg',s.bg);
+   root.style.setProperty('--crm-card',s.card);
+   root.style.setProperty('--crm-text',s.text);
+   root.style.setProperty('--crm-heading',s.heading);
+   root.style.setProperty('--crm-border',s.border);
+   root.style.setProperty('--crm-nav',s.nav);
+   root.style.setProperty('--crm-accent',s.accent||'#1677ff');
+   root.style.setProperty('--crm-scale',(Number(s.scale)||100)/100);
+   body.classList.toggle('crm-theme-professional',s.theme==='professional');
+   if($('bgColor')) $('bgColor').value=s.bg;
+   if($('cardColor')) $('cardColor').value=s.card;
+   if($('textColor')) $('textColor').value=s.text;
+   if($('headingColor')) $('headingColor').value=s.heading;
+   if($('navColor')) $('navColor').value=s.nav;
+   if($('accentColor')) $('accentColor').value=s.accent||'#1677ff';
+   if($('scaleRange')) $('scaleRange').value=s.scale;
+   if($('scaleValue')) $('scaleValue').textContent=s.scale+'%';
+   updateThemeButtons();
+   if(save) localStorage.setItem(KEY,JSON.stringify(s));
+ }
+ apply(false);
+
+ document.querySelectorAll('.appearance-open-btn').forEach(btn=>btn.onclick=()=>$('appearancePanel').classList.toggle('open'));
+ $('appearanceClose').onclick=()=>$('appearancePanel').classList.remove('open');
+
+ $('classicTheme').onclick=()=>{s.theme='classic';apply()};
+ $('professionalTheme').onclick=()=>{
+   if(s.theme!=='professional'){
+     if(!s.proInitialized){
+       s={...s,nav:'#0b466f',accent:'#1677ff',bg:'#edf4f8',card:'#ffffff',text:'#183047',heading:'#0c3456',border:'#d4e0e9',proInitialized:true};
+     }
+     s.theme='professional';
+   }
+   apply();
+ };
+
+ $('bgColor').oninput=e=>{s.bg=e.target.value;apply()};
+ $('cardColor').oninput=e=>{s.card=e.target.value;apply()};
+ $('textColor').oninput=e=>{s.text=e.target.value;apply()};
+ $('headingColor').oninput=e=>{s.heading=e.target.value;apply()};
+ $('navColor').oninput=e=>{s.nav=e.target.value;apply()};
+ $('accentColor').oninput=e=>{s.accent=e.target.value;apply()};
+ $('scaleRange').oninput=e=>{s.scale=Number(e.target.value);apply()};
+ $('scaleDown').onclick=()=>{s.scale=Math.max(85,(Number(s.scale)||100)-5);apply()};
+ $('scaleUp').onclick=()=>{s.scale=Math.min(160,(Number(s.scale)||100)+5);apply()};
+ $('darkPreset').onclick=()=>{s={...s,bg:'#111827',card:'#1f2937',text:'#f9fafb',heading:'#ffffff',border:'#4b5563',nav:'#07192a',accent:'#38a3ff'};apply()};
+ $('softPreset').onclick=()=>{s={...s,bg:'#e8eef2',card:'#f8fafc',text:'#17202a',heading:'#0f172a',border:'#b8c2cc',nav:'#164a6d',accent:'#2478d4'};apply()};
+ $('resetAppearance').onclick=()=>{s={...adminDefaults};if(!s.theme)s.theme='classic';if(!s.accent)s.accent='#1677ff';apply()};
+})();
+</script>
+{% endif %}
+</body></html>

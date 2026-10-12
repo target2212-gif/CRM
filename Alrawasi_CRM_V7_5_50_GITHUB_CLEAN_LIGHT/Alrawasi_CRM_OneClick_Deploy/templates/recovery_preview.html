@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% block content %}
+<h2>معاينة الاستعادة — فحص الحماية حسب Schema الفعلي</h2>
+<div class="alert alert-success">تم التحقق من الملف. لم يتم تعديل قاعدة البيانات.</div>
+<table class="table table-dark table-striped">
+<tr><th>إجمالي الملف</th><td>{{total}}</td></tr>
+<tr><th>مطابق لـ muqawilKey</th><td>{{matched}}</td></tr>
+<tr><th>محمي: توجد قيمة حالية في أي حقل mobile/whatsapp</th><td><b>{{protected}}</b></td></tr>
+<tr><th>فارغ في جميع حقول mobile/whatsapp — مؤهل</th><td><b>{{eligible}}</b></td></tr>
+<tr><th>غير موجود</th><td>{{missing}}</td></tr>
+</table>
+<h5>تفصيل حقول القاعدة الفعلية داخل مجموعة 13,288</h5>
+<table class="table table-dark table-bordered"><tr><th>الحقل</th><th>غير فارغ</th><th>جوال سعودي صالح</th></tr>
+{% for c in contact_cols %}<tr><td>{{c}}</td><td>{{per_field[c].nonempty}}</td><td>{{per_field[c].valid}}</td></tr>{% endfor %}
+</table>
+<div class="alert alert-warning">أي قيمة موجودة أصلًا في أي حقل mobile/whatsapp تحمي الشركة من الاستبدال، حتى لو كانت بصيغة قديمة. Backup كامل قبل التنفيذ.</div><div class="mb-3"><a class="btn btn-info" href="{{url_for('recovery_map_audit')}}">فحص نهائي للـ 2,514 مقابل ملف 13,288 — بدون تعديل</a></div>
+<form method="post" action="{{url_for('recovery_map_commit')}}">
+<input class="form-control mb-2" name="confirm" placeholder="اكتب RECOVER13288" required>
+<button class="btn btn-success">Backup ثم تنفيذ الاستعادة الآمنة</button>
+<a class="btn btn-secondary" href="{{url_for('recovery_center')}}">إلغاء</a></form>
+{% endblock %}

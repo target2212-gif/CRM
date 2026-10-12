@@ -1,0 +1,118 @@
+{% extends 'base.html' %}{% block content %}<div class="d-flex justify-content-between"><div><h2><span dir="ltr" class="badge bg-dark">#{{c.display_number}}</span> {{(c.name_ar or c.name_en)|clean_company_name}}</h2><span class="status-badge {{status_class.get(c.marketing_status,'')}}">{{status.get(c.marketing_status,c.marketing_status)}}</span> <span class="ms-2">المندوب: <b>{{c.rep or 'غير معين'}}</b></span></div><a href="{{ return_to }}" class="btn btn-outline-secondary">عودة إلى نفس الصفحة</a></div><div class="row g-3 mt-1"><div class="col-lg-5"><div class="card p-3"><h5>بيانات الشركة</h5>
+<div class="alert {% if c.classification_status=='مصنفة' %}alert-success{% elif c.classification_status=='غير مصنفة' %}alert-secondary{% else %}alert-warning{% endif %} py-2">
+<b>تصنيف منصة مقاول:</b>
+{% if c.classification_status=='مصنفة' %}مصنفة — <b>الدرجة {{c.classification_grade or 'غير محددة'}}</b>
+{% elif c.classification_status=='غير مصنفة' %}غير مصنفة
+{% else %}غير محدد{% endif %}
+</div>
+{% if 'Muqawil Platform Crawler V3' in (c.data_source or '') %}
+<div class="alert {% if c.source_verified %}alert-success{% else %}alert-danger{% endif %} py-2">
+ <b>حالة توثيق الشركة:</b>
+ {% if c.source_verified %}موثقة يدوياً{% else %}جديدة وغير موثقة — تبقى في نهاية الدليل حتى يتم توثيقها{% endif %}
+</div>
+{% if is_admin %}
+<div class="card p-3 mb-3 border-warning">
+ <h6>توثيق الشركة وتصنيفها</h6>
+ <form method="post" action="{{url_for('verify_crawler_company',cid=c.id)}}" class="row g-2">
+  <div class="col-md-4">
+   <label class="form-label">حالة التوثيق</label>
+   <select class="form-select" name="verification_state">
+    <option value="unverified" {% if not c.source_verified %}selected{% endif %}>غير موثقة</option>
+    <option value="verified" {% if c.source_verified %}selected{% endif %}>موثقة يدوياً</option>
+   </select>
+  </div>
+  <div class="col-md-4">
+   <label class="form-label">حالة التصنيف</label>
+   <select class="form-select" name="classification_status">
+    <option value="غير مصنفة" {% if c.classification_status=='غير مصنفة' %}selected{% endif %}>غير مصنفة</option>
+    <option value="غير محدد" {% if c.classification_status=='غير محدد' %}selected{% endif %}>غير محدد</option>
+    <option value="مصنفة" {% if c.classification_status=='مصنفة' %}selected{% endif %}>مصنفة</option>
+   </select>
+  </div>
+  <div class="col-md-4">
+   <label class="form-label">درجة التصنيف</label>
+   <select class="form-select" name="classification_grade">
+    <option value="">بدون درجة</option>
+    {% for g in ['سادسة','خامسة','رابعة','ثالثة','ثانية','أولى'] %}
+    <option value="{{g}}" {% if c.classification_grade==g %}selected{% endif %}>{{g}}</option>
+    {% endfor %}
+   </select>
+  </div>
+  <div class="col-12">
+   <button class="btn btn-warning">حفظ التوثيق والتصنيف</button>
+   <div class="small text-muted mt-2">عند التوثيق تنتقل الشركة تلقائياً إلى نهاية مجموعة تصنيفها بين الشركات الموثقة. إذا بقيت غير موثقة فستظل في نهاية الدليل.</div>
+  </div>
+ </form>
+</div>
+{% endif %}
+{% if is_admin %}
+<div class="card p-3 mb-3 border-info">
+ <h6>استكمال بيانات الشركة</h6>
+ <div class="small text-muted mb-3">يمكن إدخال وتعديل جميع البيانات الأساسية هنا. حفظ البيانات لا يوثّق الشركة تلقائياً ولا يغيّر مكانها ما دامت «غير موثقة».</div>
+ <form method="post" action="{{url_for('update_crawler_company_details',cid=c.id)}}" class="row g-3">
+  <div class="col-md-8"><label class="form-label">اسم الشركة</label><input class="form-control" name="name_ar" value="{{c.name_ar or ''}}" required></div>
+  <div class="col-md-4"><label class="form-label">رقم السجل التجاري</label><input class="form-control" name="cr_number" value="{{c.cr_number or ''}}"></div>
+  <div class="col-md-4"><label class="form-label">رقم العضوية</label><input class="form-control" name="muqawil_member_no" value="{{c.muqawil_member_no or ''}}"></div>
+  <div class="col-md-4"><label class="form-label">نوع العضوية</label><input class="form-control" name="membership_type" value="{{c.membership_type or ''}}"></div>
+  <div class="col-md-4"><label class="form-label">عضو منذ</label><input class="form-control" name="membership_since" value="{{c.membership_since or ''}}" placeholder="مثال: 2024/01/15"></div>
+  <div class="col-md-4"><label class="form-label">حجم المنشأة</label><select class="form-select" name="company_size"><option value="">غير محدد</option>{% for v in ['منشأة متناهية الصغر','منشأة صغيرة','منشأة متوسطة','منشأة كبيرة'] %}<option value="{{v}}" {% if c.company_size==v %}selected{% endif %}>{{v}}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><label class="form-label">حالة الحساب</label><input class="form-control" name="account_status" value="{{c.account_status or ''}}" placeholder="مثال: الحساب مفعل"></div>
+  <div class="col-md-4"><label class="form-label">الساعات التدريبية</label><input class="form-control" type="number" min="0" name="training_hours" value="{{c.training_hours if c.training_hours is not none else ''}}"></div>
+  <div class="col-md-4"><label class="form-label">المنطقة</label><input class="form-control" name="muqawil_region" value="{{c.muqawil_region or ''}}"></div>
+  <div class="col-md-4"><label class="form-label">المدينة</label><input class="form-control" name="city" value="{{c.muqawil_city or c.city or ''}}"></div>
+  <div class="col-md-4"><label class="form-label">القطاع</label><input class="form-control" name="sector" value="{{c.sector or 'مقاولات'}}"></div>
+  <div class="col-12"><label class="form-label">العنوان</label><textarea class="form-control" name="address" rows="2">{{c.muqawil_address or c.address or ''}}</textarea></div>
+  <div class="col-md-4"><label class="form-label">الجوال</label><input class="form-control" dir="ltr" name="phone_mobile" value="{{c.phone_mobile or c.muqawil_phone_mobile or ''}}" placeholder="05xxxxxxxx"></div>
+  <div class="col-md-4"><label class="form-label">واتساب</label><input class="form-control" dir="ltr" name="whatsapp" value="{{c.whatsapp or ''}}" placeholder="05xxxxxxxx"></div>
+  <div class="col-md-4"><label class="form-label">الهاتف الثابت</label><input class="form-control" dir="ltr" name="phone_landline" value="{{c.phone_landline or c.muqawil_phone_landline or ''}}"></div>
+  <div class="col-md-6"><label class="form-label">البريد الإلكتروني</label><input class="form-control" dir="ltr" type="email" name="email" value="{{c.email or c.muqawil_email or ''}}"></div>
+  <div class="col-md-6"><label class="form-label">الموقع الإلكتروني</label><input class="form-control" dir="ltr" name="website" value="{{c.website or ''}}" placeholder="https://..."></div>
+  <div class="col-12"><button class="btn btn-info">حفظ بيانات الشركة</button></div>
+ </form>
+</div>
+{% endif %}
+{% endif %}
+<p><b>رقم العضوية:</b> {{c.muqawil_member_no or '-'}}</p><p><b>نوع العضوية:</b> {{c.membership_type or '-'}}</p><p><b>عضو منذ:</b> {{c.membership_since or '-'}}</p><p><b>حجم المنشأة:</b> {{c.company_size or '-'}}</p><p><b>حالة الحساب:</b> {{c.account_status or '-'}}</p><p><b>الساعات التدريبية:</b> {{c.training_hours if c.training_hours is not none else '-'}}</p><p><b>المنطقة:</b> {{c.muqawil_region or '-'}}</p><p><b>المدينة:</b> {{c.muqawil_city or c.city or '-'}}</p><p><b>القطاع:</b> {{c.sector or '-'}}</p><p><b>العنوان:</b> {{c.muqawil_address or c.address or '-'}}</p><p><b>جوال:</b> <span class="ltr">{{c.phone_mobile or c.muqawil_phone_mobile or '-'}}</span></p><p><b>هاتف ثابت:</b> <span class="ltr">{{c.phone_landline or c.muqawil_phone_landline or '-'}}</span></p><p><b>البريد:</b> {{c.email or c.muqawil_email or '-'}}</p></div><div class="card p-3 mt-3"><h5>تحديث العميل</h5><div class="small text-muted mb-2">يمكن تصحيح الحالة في أي وقت، بما في ذلك إعادتها إلى «جديد». يسجل النظام تغيير الحالة في سجل الشركة.</div><form method="post" action="/company/{{c.id}}/update"><select name="marketing_status" class="form-select mb-2">{% for k,v in status.items() %}<option value="{{k}}" {% if c.marketing_status==k %}selected{% endif %}>{{v}}</option>{% endfor %}</select>
+{% if c.source_url or c.address or c.city %}
+<div class="mt-2 d-flex gap-2 flex-wrap">
+  {% if c.address or c.city %}
+  <a class="btn btn-outline-primary" target="_blank" rel="noopener"
+     href="https://www.google.com/maps/search/?api=1&query={{ ((c.address or '') ~ ' ' ~ (c.city or '') ~ ' ' ~ (c.name_ar or c.name_en or ''))|urlencode }}">
+     فتح الموقع على الخريطة
+  </a>
+  {% endif %}
+  {% if c.source_url %}
+  <a class="btn btn-outline-secondary" target="_blank" rel="noopener" href="{{ c.source_url }}">صفحة الشركة في مقاول</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card p-2 mb-2 bg-light"><b class="mb-2">بيانات التواصل</b><div class="row g-2"><div class="col-md-6"><label class="form-label">الجوال</label><input dir="ltr" name="phone_mobile" class="form-control" value="{{c.phone_mobile or ''}}" placeholder="05xxxxxxxx"></div><div class="col-md-6"><label class="form-label">واتساب</label><input dir="ltr" name="whatsapp" class="form-control" value="{{c.whatsapp or ''}}" placeholder="05xxxxxxxx"></div><div class="col-md-6"><label class="form-label">هاتف ثابت</label><input dir="ltr" name="phone_landline" class="form-control" value="{{c.phone_landline or ''}}"></div><div class="col-md-6"><label class="form-label">البريد الإلكتروني</label><input dir="ltr" type="email" name="email" class="form-control" value="{{c.email or ''}}"></div></div><div class="small text-muted mt-2">بعد حفظ رقم واتساب سيصبح زر إرسال الرسالة الجاهزة فعالاً مباشرة.</div></div>{% if is_admin %}<label class="form-label">المندوب</label><select name="assigned_user_id" class="form-select mb-2"><option value="">بدون مندوب</option>{% for u in users %}<option value="{{u.id}}" {% if c.assigned_user_id==u.id %}selected{% endif %}>{{u.name}}</option>{% endfor %}</select>{% endif %}<textarea name="marketing_notes" class="form-control mb-2" rows="4" placeholder="ملاحظات">{{c.marketing_notes or ''}}</textarea><button class="btn btn-dark">حفظ التعديلات</button></form></div></div><div class="col-lg-7"><div class="card p-3"><h5>تسجيل تواصل جديد</h5><form method="post" action="/company/{{c.id}}/interaction"><div class="row g-2"><div class="col-md-4"><select class="form-select" name="channel"><option>واتساب</option><option>اتصال</option><option>إيميل</option><option>اجتماع</option></select></div><div class="col-md-4"><select class="form-select" name="outcome">{% for k,v in status.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></div><div class="col-md-4"><input class="form-control" type="datetime-local" name="next_followup_at"></div></div><textarea class="form-control my-2" name="notes" rows="3" placeholder="ماذا حدث؟"></textarea><div class="d-flex gap-2 flex-wrap align-items-center">
+{% if wa_link %}<a class="btn btn-success" target="_blank" rel="noopener" href="{{wa_link}}"><i class="bi bi-whatsapp"></i> إرسال الرسالة الجاهزة</a>{% else %}<button class="btn btn-success" type="button" disabled><i class="bi bi-whatsapp"></i> إرسال الرسالة الجاهزة</button>{% endif %}
+{% if email_link %}<a class="btn btn-secondary" href="{{email_link}}"><i class="bi bi-envelope"></i> إيميل</a>{% else %}<button class="btn btn-secondary" type="button" disabled><i class="bi bi-envelope"></i> إيميل</button>{% endif %}
+{% if c.phone_mobile or c.phone_landline %}<a class="btn btn-primary" href="tel:{{c.phone_mobile or c.phone_landline}}"><i class="bi bi-telephone"></i> الاتصال</a>{% else %}<button class="btn btn-primary" type="button" disabled><i class="bi bi-telephone"></i> الاتصال</button>{% endif %}
+<button class="btn btn-dark" type="submit">حفظ التواصل</button>
+<a class="btn btn-outline-info" target="_blank" rel="noopener" href="{{ c.muqawil_profile_url or c.source_url }}"><i class="bi bi-box-arrow-up-right"></i> صفحة مقاول</a></div></form></div><div class="card p-3 mt-3"><h5>سجل التواصل</h5>{% for i in its %}<div class="border-bottom py-2"><b>{{i.channel}}</b> — {{status.get(i.outcome,i.outcome)}} — <b>{{i.rep or ''}}</b><div>{{i.notes or ''}}</div><small class="text-muted">{{i.contacted_at}}{% if i.next_followup_at %} | متابعة: {{i.next_followup_at}}{% endif %}</small>{% if is_admin %}<form method="post" action="/company/{{c.id}}/interaction/{{i.id}}/delete" class="d-inline ms-2" onsubmit="return confirm('حذف تسجيل التواصل هذا لأنه أضيف بالخطأ؟');"><button class="btn btn-sm btn-outline-danger py-0">حذف التسجيل</button></form>{% endif %}</div>{% else %}<div class="text-muted">لا يوجد تواصل مسجل.</div>{% endfor %}</div></div></div>{% if is_admin %}
+<div class="card p-3 mt-3 border-danger">
+  <h5 class="text-danger">إدارة الشركة</h5>
+  <p class="text-muted mb-2">الحذف نهائي ومتاح لمدير النظام فقط.</p>
+  <form method="post" action="{{ url_for('delete_company', company_id=c.id) }}"
+        onsubmit="return confirm('هل أنت متأكد من حذف هذه الشركة نهائياً؟ سيتم حذف جميع سجلات التواصل والبيانات المرتبطة بها، ولا يمكن التراجع.');">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
+    <button type="submit" class="btn btn-danger">حذف الشركة نهائياً والعودة لنفس الصفحة</button>
+  </form>
+</div>
+{% endif %}
+
+{% if is_admin and not c.phone_mobile %}
+<form method="post" action="{{url_for('google_phone_one',cid=c.id)}}" class="d-inline"><input type="hidden" name="return_to" value="{{request.path}}">
+<button class="btn btn-outline-primary" type="submit">البحث عن رقم من Google Maps</button>
+</form>
+{% endif %}
+{% if c.phone_source %}<div class="small text-muted mt-2">مصدر الهاتف: {{c.phone_source}}{% if c.phone_verified_at %} • {{c.phone_verified_at}}{% endif %}</div>{% endif %}
+
+
+{% if c.phone_source == 'unverified_import' %}
+<div class="alert alert-warning mt-3"><b>تنبيه:</b> بيانات الهاتف مستوردة وغير موثقة. لا تستخدم الرقم قبل التحقق من Google Maps/Places أو المصدر الرسمي.</div>
+{% endif %}
+{% endblock %}

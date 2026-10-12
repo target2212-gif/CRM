@@ -1,0 +1,12 @@
+{% extends 'base.html' %}{% block content %}
+<div class="row justify-content-center mt-5"><div class="col-md-5"><div class="card p-4">
+<img class="crm-login-logo" src="{{ url_for('static', filename='branding/alrawasi-hills-logo.jpg') }}" alt="تلال الرواسي">
+<h3 class="mb-4 text-center">تسجيل الدخول</h3>
+<form method="post">
+<input class="form-control mb-3" name="email" type="email" placeholder="البريد الإلكتروني" required>
+<input class="form-control mb-3" name="password" type="password" placeholder="كلمة المرور" required>
+<button class="btn btn-dark w-100">دخول</button>
+</form>
+<a class="btn btn-link mt-3" href="{{ url_for('forgot_password') }}">نسيت كلمة المرور؟</a>
+</div></div></div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% block content %}
+<h2>حماية قاعدة البيانات Data-Lock</h2>
+<div class="alert {% if live.error %}alert-danger{% else %}alert-success{% endif %}">
+<b>قاعدة البيانات المستخدمة الآن:</b> {{db_path}}<br>
+<b>DATA_DIR:</b> {{data_dir}} • <b>Render:</b> {{is_render}} • <b>قفل البيانات:</b> {{lock_exists}}<br>
+{% if live.error %}<b>خطأ:</b> {{live.error}}{% else %}
+الشركات: <b>{{live.companies}}</b> • الشركات ذات الجوال: <b>{{live.mobiles}}</b> • المستخدمون: <b>{{live.users}}</b> • سجلات التواصل: <b>{{live.interactions}}</b><br>
+الحجم: {{(live.size/1024/1024)|round(2)}} MB • آخر تعديل: {{live.modified}}
+{% endif %}
+</div>
+<a class="btn btn-primary mb-3" href="{{url_for('data_lock_backup')}}">تنزيل نسخة احتياطية الآن</a>
+<h4>النسخ الاحتياطية على القرص الدائم</h4>
+<div class="table-responsive"><table class="table table-dark table-striped"><thead><tr><th>النسخة</th><th>الشركات</th><th>الجوالات</th><th>التواصل</th><th>آخر تعديل</th><th></th></tr></thead><tbody>
+{% for b in backups %}<tr><td>{{b.name}}</td><td>{{b.companies if not b.error else '-'}}</td><td>{{b.mobiles if not b.error else '-'}}</td><td>{{b.interactions if not b.error else '-'}}</td><td>{{b.modified if not b.error else b.error}}</td><td><a class="btn btn-sm btn-outline-info" href="{{url_for('data_lock_download',name=b.name)}}">تنزيل</a>
+<form class="d-inline" method="post" action="{{url_for('data_lock_restore')}}" onsubmit="return confirm('سيتم استبدال قاعدة البيانات الحالية بهذه النسخة. هل أنت متأكد؟')"><input type="hidden" name="name" value="{{b.name}}"><input name="confirm" placeholder="RESTORE" style="width:95px" required><button class="btn btn-sm btn-outline-warning">استعادة</button></form></td></tr>{% endfor %}
+</tbody></table></div>
+<div class="alert alert-warning">لا تستعد نسخة قبل مقارنة عدد الشركات والجوالات وسجلات التواصل. النظام ينشئ نسخة أمان إضافية قبل كل استعادة.</div>
+{% endblock %}
