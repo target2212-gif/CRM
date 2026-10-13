@@ -70,6 +70,19 @@ elif DB != SEED_DB and os.path.exists(DB) and not os.path.exists(DATA_LOCK):
  with open(DATA_LOCK,'w',encoding='utf-8') as _f: _f.write(datetime.now().isoformat())
 STATUS={'new':'جديد','contacted':'تم التواصل','interested':'مهتم','quote_requested':'طلب عرض سعر','quote_sent':'تم إرسال عرض السعر','followup':'متابعة','contracted':'تم التعاقد','not_interested':'غير مهتم','unreachable':'لا يمكن التواصل','postponed':'مؤجل'}
 STATUS_CLASS={k:'status-'+k.replace('_','-') for k in STATUS}
+
+def _status_from_remaining_interactions(d, company_id):
+ """Rebuild the CRM state after a contact is removed.
+
+ The most recent surviving valid event is authoritative (including an explicit
+ status-change entry). An empty history means the company is NEW, not contacted.
+ This does not remove any other interactions or change department ownership.
+ """
+ row=d.execute("""SELECT outcome FROM interactions
+    WHERE company_id=? AND outcome IN ('new','contacted','interested','quote_requested','quote_sent','followup','contracted','not_interested','unreachable','postponed')
+    ORDER BY contacted_at DESC, id DESC LIMIT 1""", (company_id,)).fetchone()
+ return row['outcome'] if row else 'new'
+
 SPECIALTIES={'contracting':'خدمات المقاولين والشهادات','advertising':'الدعاية والإعلان','general':'خدمات عامة'}
 DEFAULT_MESSAGES={
  'contracting':'السلام عليكم، معك {rep_name} من تلال الرواسي. نقدم خدمات تصنيف شركات المقاولات، شهادة المحتوى المحلي، وشهادات الأيزو. يسعدنا خدمة {company_name} وتزويدكم بالتفاصيل والعرض المناسب.',
@@ -152,6 +165,14 @@ def ensure_schema():
   d.execute('DROP INDEX IF EXISTS idx_companies_muqawil_member')
   d.execute('CREATE INDEX IF NOT EXISTS idx_companies_muqawil_member ON companies(muqawil_member_no)')
   d.execute('CREATE INDEX IF NOT EXISTS idx_interactions_company ON interactions(company_id, contacted_at)')
+  # Correct legacy orphan cards after previous versions deleted their final event
+  # without clearing the company's 'contacted' state. This changes ONLY companies
+  # marked contacted that now have zero interaction history of any kind.
+  repaired=d.execute('''UPDATE companies SET marketing_status='new',updated_at=CURRENT_TIMESTAMP
+     WHERE marketing_status='contacted' AND NOT EXISTS
+       (SELECT 1 FROM interactions i WHERE i.company_id=companies.id)''').rowcount
+  if repaired:
+   print(f'CRM: repaired {repaired} stale contacted card(s) with empty history',flush=True)
   d.commit()
  except Exception:
   d.rollback()
@@ -331,11 +352,14 @@ def sync_contact_ledger():
  try:
   d.execute('BEGIN IMMEDIATE')
   latest_by_company={}
+  tombstone_company_ids=set()
   for r in remote:
    event_id,company_key,company_name,user_email,user_name,channel,outcome,notes,contacted_at,next_followup,deleted=r
-   existing=d.execute("SELECT id FROM interactions WHERE remote_event_id=?",(event_id,)).fetchone()
+   existing=d.execute('SELECT id,company_id FROM interactions WHERE remote_event_id=?',(event_id,)).fetchone()
    if deleted:
-    if existing: d.execute("DELETE FROM interactions WHERE id=?",(existing['id'],))
+    if existing:
+     tombstone_company_ids.add(existing['company_id'])
+     d.execute('DELETE FROM interactions WHERE id=?',(existing['id'],))
     continue
    c=d.execute("""
     SELECT id FROM companies
@@ -367,6 +391,12 @@ def sync_contact_ledger():
   for cid,(_,outcome) in latest_by_company.items():
    if outcome:
     d.execute("UPDATE companies SET marketing_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(outcome,cid))
+  # A remote tombstone may have deleted the last local contact during sync.
+  # Reconcile those companies against the surviving events, not stale status.
+  for cid in tombstone_company_ids:
+   updated_status=_status_from_remaining_interactions(d,cid)
+   d.execute('UPDATE companies SET marketing_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+             (updated_status,cid))
   d.commit()
  finally:
   d.close()
@@ -1021,22 +1051,31 @@ def delete_user(uid):
 @app.post('/company/<int:cid>/interaction/<int:iid>/delete')
 @admin_required
 def delete_interaction(cid,iid):
- d=db(); row=d.execute('SELECT * FROM interactions WHERE id=? AND company_id=?',(iid,cid)).fetchone()
- if not row: d.close(); abort(404)
+ d=db()
  try:
+  d.execute('BEGIN IMMEDIATE')
+  row=d.execute('SELECT * FROM interactions WHERE id=? AND company_id=?',(iid,cid)).fetchone()
+  if not row:
+   d.rollback(); abort(404)
   ev=_local_event_payload(d,row)
   if contact_ledger_configured():
    _ledger_tombstone(ev)
-  d.execute('DELETE FROM interactions WHERE id=?',(iid,))
+  d.execute('DELETE FROM interactions WHERE id=? AND company_id=?',(iid,cid))
+  # Save the deletion and the company status as one SQLite transaction, which
+  # is then checkpointed together to Neon by DurableConnection.commit().
+  new_status=_status_from_remaining_interactions(d,cid)
+  d.execute('UPDATE companies SET marketing_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+            (new_status,cid))
   d.commit()
  except Exception:
-  d.rollback(); d.close()
+  d.rollback()
   if contact_ledger_configured():
    flash('تعذر تسجيل الحذف في السجل الدائم، لذلك لم يتم حذف سجل التواصل.')
    return redirect(url_for('company',cid=cid))
   raise
- d.close()
- flash('تم حذف تسجيل التواصل الذي أضيف بالخطأ.')
+ finally:
+  d.close()
+ flash('تم حذف سجل التواصل، وتحديث حالة الشركة حسب السجلات المتبقية.')
  return redirect(url_for('company',cid=cid))
 
 @app.route('/companies/add',methods=['GET','POST'])
