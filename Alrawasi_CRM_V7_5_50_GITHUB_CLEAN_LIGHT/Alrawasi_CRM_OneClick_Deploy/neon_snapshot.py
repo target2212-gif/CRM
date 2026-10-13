@@ -3,6 +3,7 @@
 Not a native PostgreSQL schema migration. Single instance/single worker only.
 """
 import gzip
+from contextlib import closing
 import os
 import sqlite3
 import tempfile
@@ -28,7 +29,7 @@ def _connection():
 def _healthy(path):
     if not os.path.isfile(path):
         return False
-    with sqlite3.connect(path) as con:
+    with closing(sqlite3.connect(path)) as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         return {'users', 'companies', 'interactions', 'templates'} <= tables and con.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
 
@@ -48,7 +49,7 @@ def restore(path, seed_path=None):
             raise RuntimeError('Neon has no CRM snapshot. Restore/migrate the live database first; set ALLOW_SEED_INITIALIZATION=true ONLY for first-time seed initialization.')
         if not seed_path or not _healthy(seed_path):
             raise RuntimeError('Cannot initialize Neon: seed database is missing or corrupt')
-        with sqlite3.connect(seed_path) as seed:
+        with closing(sqlite3.connect(seed_path)) as seed:
             publish(seed, allow_initial=True)
         row = None
         with _connection() as pg:

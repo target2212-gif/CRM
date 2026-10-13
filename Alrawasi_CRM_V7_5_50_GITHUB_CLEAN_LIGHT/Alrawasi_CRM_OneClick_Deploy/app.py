@@ -480,7 +480,7 @@ def ctx():
   if u and u['appearance_default']:
    try: appearance=json.loads(u['appearance_default'])
    except: appearance={}
- return {'status':STATUS,'status_class':STATUS_CLASS,'specialties':SPECIALTIES,'user':session.get('name'),'appearance_default':appearance,'app_version':APP_VERSION,'contact_ledger_configured':contact_ledger_configured()}
+ return {'status':STATUS,'status_class':STATUS_CLASS,'specialties':SPECIALTIES,'user':session.get('name'),'appearance_default':appearance,'app_version':APP_VERSION,'contact_ledger_configured':contact_ledger_configured(), 'neon_snapshot_mode':_NEON_SNAPSHOT_MODE and not _NEON_WRITE_FAILED}
 @app.route('/login',methods=['GET','POST'])
 def login():
  if request.method=='POST':
@@ -647,8 +647,18 @@ def dashboard():
   reps=d.execute("SELECT u.id,u.name,u.role,COUNT(c.id) n,SUM(CASE WHEN c.marketing_status='contacted' THEN 1 ELSE 0 END) contacted,SUM(CASE WHEN c.marketing_status='interested' THEN 1 ELSE 0 END) interested,SUM(CASE WHEN c.marketing_status='contracted' THEN 1 ELSE 0 END) contracted,(SELECT MAX(i.contacted_at) FROM interactions i WHERE i.user_id=u.id) last_contact FROM users u LEFT JOIN companies c ON c.assigned_user_id=u.id WHERE u.active=1 GROUP BY u.id ORDER BY n DESC").fetchall()
  else:
   follow=d.execute("SELECT COUNT(DISTINCT i.company_id) n FROM interactions i JOIN companies c ON c.id=i.company_id WHERE c.assigned_user_id=? AND i.next_followup_at IS NOT NULL AND datetime(i.next_followup_at)<=datetime('now','localtime')",(session['uid'],)).fetchone()['n']; reps=[]
+ # Unique contacted companies and contact attempts are separate measures.
+ # Non-admins see their own contact activity only (consistent with monthly reports).
+ contact_filter="i.outcome IN ('contacted','unreachable') AND "+specialty_scope(me,'c')[0]
+ contact_args=[]
+ if not is_admin:
+  contact_filter+=' AND i.user_id=?'
+  contact_args.append(session['uid'])
+ contact_kpi=d.execute("SELECT COUNT(DISTINCT i.company_id) AS unique_companies, "
+   "COUNT(DISTINCT CASE WHEN i.outcome='contacted' THEN i.company_id END) AS reached_companies, "
+   "COUNT(*) AS attempts FROM interactions i JOIN companies c ON c.id=i.company_id WHERE "+contact_filter,contact_args).fetchone()
  recent=d.execute(f"SELECT c.id,c.name_ar,c.name_en,i.channel,i.outcome,i.contacted_at,i.next_followup_at FROM interactions i JOIN companies c ON c.id=i.company_id WHERE {specialty_scope(me,'c')[0]} ORDER BY i.contacted_at DESC LIMIT 10").fetchall(); d.close()
- return render_template('dashboard.html',counts=counts,total=total,follow=follow,reps=reps,recent=recent,is_admin=is_admin)
+ return render_template('dashboard.html',counts=counts,total=total,follow=follow,reps=reps,recent=recent,is_admin=is_admin,contact_kpi=contact_kpi)
 
 def company_directory_order_sql(alias='c'):
  a=alias
@@ -916,8 +926,8 @@ def interaction(cid):
    return redirect(url_for('company',cid=cid))
   raise
  d.close()
- if not contact_ledger_configured():
-  flash('تم تسجيل التواصل محلياً، لكن التخزين الدائم غير مفعل. أضف CONTACTS_DATABASE_URL لحماية السجل من إعادة تشغيل Render.')
+ if not contact_ledger_configured() and not _NEON_SNAPSHOT_MODE:
+  flash('تم تسجيل التواصل محلياً فقط؛ أضف إعداد التخزين الخارجي قبل الاعتماد.')
  return redirect(url_for('company',cid=cid))
 
 @app.post('/company/<int:cid>/quick-followup')
@@ -938,10 +948,12 @@ def quick_followup(cid):
    return redirect(request.referrer or url_for('companies'))
   raise
  d.close()
- if not contact_ledger_configured():
-  flash('تم تسجيل المتابعة محلياً، لكن التخزين الدائم غير مفعل.')
+ if not contact_ledger_configured() and not _NEON_SNAPSHOT_MODE:
+  flash('تم تسجيل المتابعة محلياً فقط؛ إعداد التخزين الخارجي غير مفعل.')
+ elif _NEON_SNAPSHOT_MODE:
+  flash('تم تسجيل المتابعة وكتابة لقطة CRM إلى Neon (وضع التخزين الانتقالي).')
  else:
-  flash('تم تسجيل المتابعة وحفظها في السجل الدائم.')
+  flash('تم تسجيل المتابعة في سجل التواصل الخارجي.')
  return redirect(request.referrer or url_for('companies'))
 
 @app.get('/users')
@@ -1983,11 +1995,22 @@ def _report_summary(d,month_value,selected_user,selected_row):
   result[key]['events']=events
 
  rows=sorted(result.values(),key=lambda x:(-x['total'],x['name']))
+ # IMPORTANT: summing per-user unique companies double-counts companies reached
+ # by two departments. Organization-wide KPIs must use DISTINCT company_id.
+ user_sql,user_args=_report_user_condition(selected_user,selected_row)
+ kpi=d.execute(f"""SELECT
+   COUNT(DISTINCT i.company_id) AS unique_companies,
+   COUNT(DISTINCT CASE WHEN i.outcome='contacted' THEN i.company_id END) AS contacted_companies,
+   COUNT(DISTINCT CASE WHEN i.outcome='unreachable' THEN i.company_id END) AS unreachable_companies,
+   COUNT(*) AS events
+  FROM interactions i
+  WHERE i.outcome IN ('contacted','unreachable')
+    AND i.contacted_at>=? AND i.contacted_at<? {user_sql}""",[start,end]+user_args).fetchone()
  totals={
-  'contacted':sum(x['contacted'] for x in rows),
-  'unreachable':sum(x['unreachable'] for x in rows),
-  'total':sum(x['total'] for x in rows),
-  'events':sum(x['events'] for x in rows)
+  'contacted':kpi['contacted_companies'],
+  'unreachable':kpi['unreachable_companies'],
+  'total':kpi['unique_companies'],
+  'events':kpi['events']
  }
  return month_value,start,end,rows,totals
 
@@ -2084,7 +2107,7 @@ def reports_export_xlsx():
  ss['A1']='تقرير إنجاز المستخدمين'
  ss['A2']='الشهر'; ss['B2']=month
  ss['A3']='نوع التقرير'; ss['B3']={'contacted':'تم التواصل','unreachable':'لا يمكن التواصل','both':'الاثنان معاً'}[rtype]
- ss['A5']='المستخدم'; ss['B5']='تم التواصل'; ss['C5']='لا يمكن التواصل'; ss['D5']='إجمالي الشركات'; ss['E5']='سجلات النشاط'
+ ss['A5']='المستخدم'; ss['B5']='تم التواصل'; ss['C5']='لا يمكن التواصل'; ss['D5']='شركات فريدة لكل مستخدم'; ss['E5']='سجلات النشاط'
  for c in ss[5]:
   c.fill=header_fill;c.font=Font(color=white,bold=True);c.alignment=Alignment(horizontal='center')
  row=6
@@ -2092,7 +2115,7 @@ def reports_export_xlsx():
   ss.append([item['name'],item['contacted'],item['unreachable'],item['total'],item['events']])
   row+=1
  total_row=6+len(summary)
- ss.cell(total_row,1,'الإجمالي')
+ ss.cell(total_row,1,'الإجمالي بدون تكرار الشركات')
  ss.cell(total_row,2,totals['contacted'])
  ss.cell(total_row,3,totals['unreachable'])
  ss.cell(total_row,4,totals['total'])
