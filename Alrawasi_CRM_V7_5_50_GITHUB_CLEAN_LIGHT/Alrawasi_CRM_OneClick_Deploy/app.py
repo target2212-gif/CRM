@@ -71,17 +71,31 @@ elif DB != SEED_DB and os.path.exists(DB) and not os.path.exists(DATA_LOCK):
 STATUS={'new':'جديد','contacted':'تم التواصل','interested':'مهتم','quote_requested':'طلب عرض سعر','quote_sent':'تم إرسال عرض السعر','followup':'متابعة','contracted':'تم التعاقد','not_interested':'غير مهتم','unreachable':'لا يمكن التواصل','postponed':'مؤجل'}
 STATUS_CLASS={k:'status-'+k.replace('_','-') for k in STATUS}
 
-def _status_from_remaining_interactions(d, company_id):
- """Rebuild the CRM state after a contact is removed.
+def _is_real_contact_channel(channel):
+ """A saved outreach (WhatsApp/call/email/meeting), not an internal state edit.
 
- The most recent surviving valid event is authoritative (including an explicit
- status-change entry). An empty history means the company is NEW, not contacted.
- This does not remove any other interactions or change department ownership.
+ An old form defaulted the outcome to 'new', although a real outreach happened.
+ Such old events are preserved as-is in history but must count as a contact.
  """
- row=d.execute("""SELECT outcome FROM interactions
+ return str(channel or '').strip() not in ('', 'تحديث حالة العميل', 'متابعة')
+
+
+def _effective_contact_outcome(outcome, channel):
+ if outcome == 'new' and _is_real_contact_channel(channel):
+  return 'contacted'
+ return outcome
+
+
+def _status_from_remaining_interactions(d, company_id):
+ """Rebuild state after deletion, preserving explicit status-change events.
+
+ Only a real outreach with legacy outcome 'new' is interpreted as 'contacted'.
+ An explicit later change back to NEW remains authoritative.
+ """
+ row=d.execute("""SELECT outcome,channel FROM interactions
     WHERE company_id=? AND outcome IN ('new','contacted','interested','quote_requested','quote_sent','followup','contracted','not_interested','unreachable','postponed')
     ORDER BY contacted_at DESC, id DESC LIMIT 1""", (company_id,)).fetchone()
- return row['outcome'] if row else 'new'
+ return _effective_contact_outcome(row['outcome'],row['channel']) if row else 'new'
 
 SPECIALTIES={'contracting':'خدمات المقاولين والشهادات','advertising':'الدعاية والإعلان','general':'خدمات عامة'}
 DEFAULT_MESSAGES={
@@ -173,6 +187,21 @@ def ensure_schema():
        (SELECT 1 FROM interactions i WHERE i.company_id=companies.id)''').rowcount
   if repaired:
    print(f'CRM: repaired {repaired} stale contacted card(s) with empty history',flush=True)
+  # V7.5.53: older "new" contact forms saved real WhatsApp/call events with
+  # outcome=new, leaving the company NEW/white. Preserve interaction history;
+  # only correct companies whose *latest* event is that real legacy outreach.
+  # A later explicit manual change to NEW has channel="تحديث حالة العميل"
+  # and is intentionally left alone.
+  repaired_new=d.execute("""UPDATE companies SET marketing_status='contacted',updated_at=CURRENT_TIMESTAMP
+   WHERE marketing_status='new' AND EXISTS (
+    SELECT 1 FROM interactions i
+     WHERE i.id=(SELECT j.id FROM interactions j WHERE j.company_id=companies.id
+                 ORDER BY j.contacted_at DESC,j.id DESC LIMIT 1)
+       AND i.outcome='new'
+       AND COALESCE(TRIM(i.channel),'') NOT IN ('','تحديث حالة العميل','متابعة')
+   )""").rowcount
+  if repaired_new:
+   print(f'CRM: recognized {repaired_new} legacy NEW-outcome actual contact(s)',flush=True)
   d.commit()
  except Exception:
   d.rollback()
@@ -413,7 +442,7 @@ def _save_interaction_durable(d,c,cid,channel,outcome,notes,next_followup):
   'user_email':(user['email'] or '') if user else '',
   'user_name_snapshot':session.get('name','') or ((user['name'] or '') if user else ''),
   'channel':channel or '',
-  'outcome':outcome or '',
+  'outcome':_effective_contact_outcome(outcome or '', channel),
   'notes':notes or '',
   'contacted_at':contacted_at,
   'next_followup_at':next_followup
@@ -732,7 +761,7 @@ def contact_department_colors(d, company_ids):
     FROM interactions i LEFT JOIN users u ON u.id=i.user_id
     WHERE i.company_id IN ({params})
       AND COALESCE(TRIM(i.channel),'') NOT IN ('','تحديث حالة العميل','متابعة')
-      AND COALESCE(i.outcome,'') NOT IN ('new','unreachable')
+      AND COALESCE(i.outcome,'') <> 'unreachable'
     GROUP BY i.company_id""",company_ids).fetchall()
  states={}
  for record in records:
